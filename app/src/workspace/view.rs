@@ -515,8 +515,6 @@ use crate::workspace::cross_window_tab_drag::{
 use crate::workspace::header_toolbar_editor::{HeaderToolbarEditorEvent, HeaderToolbarEditorModal};
 use crate::workspace::header_toolbar_item::HeaderToolbarItemKind;
 use crate::workspace::one_time_modal_model::OneTimeModalModel;
-#[cfg(feature = "warpeer_plugins")]
-use crate::workspace::plugin_diagnostics;
 use crate::workspace::sync_inputs::SyncedInputState;
 use crate::workspace::tab_group::{TabGroup, TabGroupId};
 use crate::workspace::tab_settings::TabCloseButtonPosition;
@@ -1133,10 +1131,6 @@ pub struct Workspace {
     tab_quick_preview: tab_quick_preview::TabQuickPreviewState,
     header_toolbar_context_menu: ViewHandle<Menu<WorkspaceAction>>,
     show_header_toolbar_context_menu: Option<Vector2F>,
-    #[cfg(feature = "warpeer_plugins")]
-    plugin_diagnostics_menu: ViewHandle<Menu<WorkspaceAction>>,
-    #[cfg(feature = "warpeer_plugins")]
-    show_plugin_diagnostics_menu: bool,
     /// Dropdown menu for the title-bar team-switcher pill.
     team_switcher_menu: ViewHandle<Menu<WorkspaceAction>>,
     show_team_switcher_menu: bool,
@@ -2920,17 +2914,6 @@ impl Workspace {
 
         terminal::platform::init().expect("Terminal platform initialized");
 
-        #[cfg(feature = "warpeer_plugins")]
-        ctx.observe(
-            &crate::warpeer_plugin::WarpeerPluginHost::handle(ctx),
-            |workspace, _, ctx| {
-                if workspace.show_plugin_diagnostics_menu {
-                    workspace.refresh_plugin_diagnostics_menu(ctx);
-                }
-                ctx.notify();
-            },
-        );
-
         let tab_bar_overflow_menu = Self::build_tab_bar_overflow_menu(ctx);
         let (
             tab_right_click_menu,
@@ -3549,10 +3532,6 @@ impl Workspace {
             tab_quick_preview: tab_quick_preview::TabQuickPreviewState::new(),
             header_toolbar_context_menu: Self::build_header_toolbar_context_menu(ctx),
             show_header_toolbar_context_menu: None,
-            #[cfg(feature = "warpeer_plugins")]
-            plugin_diagnostics_menu: Self::build_plugin_diagnostics_menu(ctx),
-            #[cfg(feature = "warpeer_plugins")]
-            show_plugin_diagnostics_menu: false,
             team_switcher_menu: Self::build_team_switcher_menu(ctx),
             show_team_switcher_menu: false,
             is_user_menu_open: false,
@@ -6246,60 +6225,6 @@ impl Workspace {
             }
         });
         menu
-    }
-
-    #[cfg(feature = "warpeer_plugins")]
-    fn build_plugin_diagnostics_menu(
-        ctx: &mut ViewContext<Self>,
-    ) -> ViewHandle<Menu<WorkspaceAction>> {
-        let menu = ctx.add_typed_action_view(|ctx| {
-            let mut menu = plugin_diagnostics::menu();
-            menu.set_items(plugin_diagnostics::items(ctx), ctx);
-            menu
-        });
-        ctx.subscribe_to_view(&menu, |workspace, _, event, ctx| {
-            if let MenuEvent::Close { .. } = event {
-                workspace.show_plugin_diagnostics_menu = false;
-                ctx.notify();
-            }
-        });
-        menu
-    }
-
-    #[cfg(feature = "warpeer_plugins")]
-    fn refresh_plugin_diagnostics_menu(&mut self, ctx: &mut ViewContext<Self>) {
-        let items = plugin_diagnostics::items(ctx);
-        self.plugin_diagnostics_menu
-            .update(ctx, |menu, ctx| menu.set_items(items, ctx));
-    }
-
-    #[cfg(feature = "warpeer_plugins")]
-    fn toggle_plugin_diagnostics(&mut self, ctx: &mut ViewContext<Self>) {
-        if self.show_plugin_diagnostics_menu {
-            self.close_plugin_diagnostics(ctx);
-            return;
-        }
-        self.close_all_overlays(ctx);
-        self.refresh_plugin_diagnostics_menu(ctx);
-        self.show_plugin_diagnostics_menu = true;
-        ctx.focus(&self.plugin_diagnostics_menu);
-        ctx.notify();
-    }
-
-    #[cfg(feature = "warpeer_plugins")]
-    fn clear_plugin_diagnostics(&mut self, ctx: &mut ViewContext<Self>) {
-        crate::warpeer_plugin::WarpeerPluginHost::as_ref(ctx).clear_diagnostics();
-        self.refresh_plugin_diagnostics_menu(ctx);
-        self.show_plugin_diagnostics_menu = true;
-        ctx.focus(&self.plugin_diagnostics_menu);
-        ctx.notify();
-    }
-
-    #[cfg(feature = "warpeer_plugins")]
-    fn close_plugin_diagnostics(&mut self, ctx: &mut ViewContext<Self>) {
-        self.show_plugin_diagnostics_menu = false;
-        self.focus_active_tab(ctx);
-        ctx.notify();
     }
 
     fn build_team_switcher_menu(ctx: &mut ViewContext<Self>) -> ViewHandle<Menu<WorkspaceAction>> {
@@ -14866,10 +14791,6 @@ impl Workspace {
         self.pane_layout_picker.dismiss();
         self.close_tab_bar_overflow_menu(ctx);
         self.close_all_chip_menus(ctx);
-        #[cfg(feature = "warpeer_plugins")]
-        {
-            self.show_plugin_diagnostics_menu = false;
-        }
 
         self.active_tab_pane_group()
             .update(ctx, |pane_group, ctx| pane_group.close_overlays(ctx));
@@ -21430,16 +21351,7 @@ impl Workspace {
             HeaderToolbarItemKind::NotificationsMailbox => {
                 self.render_notifications_mailbox_button(appearance, ctx)
             }
-            HeaderToolbarItemKind::PluginDiagnostics => {
-                #[cfg(feature = "warpeer_plugins")]
-                {
-                    self.render_plugin_diagnostics_button(appearance, ctx)
-                }
-                #[cfg(not(feature = "warpeer_plugins"))]
-                {
-                    return None;
-                }
-            }
+            HeaderToolbarItemKind::PluginDiagnostics => return None,
         };
         Some(
             Container::new(
@@ -21522,32 +21434,6 @@ impl Workspace {
         .finish()
     }
 
-    #[cfg(feature = "warpeer_plugins")]
-    fn render_plugin_diagnostics_button(
-        &self,
-        appearance: &Appearance,
-        _ctx: &AppContext,
-    ) -> Box<dyn Element> {
-        SavePosition::new(
-            Align::new(
-                self.render_tab_bar_icon_button(
-                    appearance,
-                    icons::Icon::Bug,
-                    &self.mouse_states.plugin_diagnostics,
-                    WorkspaceAction::TogglePluginDiagnostics,
-                    "Plugin Diagnostics".to_string(),
-                    None,
-                    self.show_plugin_diagnostics_menu,
-                    false,
-                )
-                .finish(),
-            )
-            .finish(),
-            plugin_diagnostics::POSITION_ID,
-        )
-        .finish()
-    }
-
     /// Adds the configurable right-side toolbar items plus the fixed controls
     /// (update pill, offline indicator, avatar, etc.) that are not configurable.
     fn add_configurable_right_side_tab_bar_controls(
@@ -21583,10 +21469,6 @@ impl Workspace {
         for item in config.right_items() {
             #[cfg(feature = "warpeer")]
             if item == HeaderToolbarItemKind::PaneLayouts {
-                continue;
-            }
-            #[cfg(feature = "warpeer_plugins")]
-            if item == HeaderToolbarItemKind::PluginDiagnostics {
                 continue;
             }
             if let Some(button) = self.render_header_toolbar_button(&item, appearance, ctx) {
@@ -21653,18 +21535,6 @@ impl Workspace {
             target.add_child(button);
         }
 
-        #[cfg(feature = "warpeer_plugins")]
-        if config
-            .right_items()
-            .contains(&HeaderToolbarItemKind::PluginDiagnostics)
-            && let Some(button) = self.render_header_toolbar_button(
-                &HeaderToolbarItemKind::PluginDiagnostics,
-                appearance,
-                ctx,
-            )
-        {
-            target.add_child(button);
-        }
         let zoom_factor = WindowSettings::as_ref(ctx).zoom_level.as_zoom_factor();
         let traffic_light_data = traffic_light_data(ctx, self.window_id);
         if let Some(traffic_light_data) = traffic_light_data.as_ref()
@@ -25604,12 +25474,6 @@ impl TypedActionView for Workspace {
             ShowHeaderToolbarContextMenu { position } => {
                 self.show_header_toolbar_context_menu(*position, ctx);
             }
-            #[cfg(feature = "warpeer_plugins")]
-            TogglePluginDiagnostics => self.toggle_plugin_diagnostics(ctx),
-            #[cfg(feature = "warpeer_plugins")]
-            ClearPluginDiagnostics => self.clear_plugin_diagnostics(ctx),
-            #[cfg(feature = "warpeer_plugins")]
-            ClosePluginDiagnostics => self.close_plugin_diagnostics(ctx),
             ReopenClosedSession => {
                 // While we could grab the UndoCloseStack singleton entity and
                 // directly call undo_close(), it would fail when attempting to
@@ -27328,20 +27192,6 @@ impl View for Workspace {
                     PositionedElementOffsetBounds::WindowByPosition,
                     PositionedElementAnchor::BottomLeft,
                     ChildAnchor::TopLeft,
-                ),
-            );
-        }
-
-        #[cfg(feature = "warpeer_plugins")]
-        if self.show_plugin_diagnostics_menu {
-            stack.add_positioned_overlay_child(
-                ChildView::new(&self.plugin_diagnostics_menu).finish(),
-                OffsetPositioning::offset_from_save_position_element(
-                    plugin_diagnostics::POSITION_ID,
-                    vec2f(0., 4.),
-                    PositionedElementOffsetBounds::WindowByPosition,
-                    PositionedElementAnchor::BottomRight,
-                    ChildAnchor::TopRight,
                 ),
             );
         }

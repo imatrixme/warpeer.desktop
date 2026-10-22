@@ -2196,26 +2196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bindgen"
-version = "0.72.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
-dependencies = [
- "bitflags 2.13.0",
- "cexpr",
- "clang-sys",
- "itertools 0.13.0",
- "log",
- "prettyplease",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash 2.1.1",
- "shlex",
- "syn 2.0.117",
-]
-
-[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3414,15 +3394,6 @@ name = "convert_case"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb402b8d4c85569410425650ce3eddc7d698ed96d39a73f941b08fb63082f1e7"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
-name = "convert_case"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "affbf0190ed2caf063e3def54ff444b449371d55c58e513a95ab98eca50adb49"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -6169,12 +6140,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grid"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b40ca9252762c466af32d0b1002e91e4e1bc5398f77455e55474deb466355ff5"
-
-[[package]]
 name = "group"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7081,9 +7046,6 @@ dependencies = [
  "warp_cli",
  "warp_core",
  "warp_multi_agent_api",
- "warpeer_plugin_protocol",
- "warpeer_plugin_runtime",
- "warpeer_plugin_worker",
  "warpui",
  "warpui_core",
  "warpui_extras",
@@ -9362,10 +9324,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "180788110936d59bab6bd83b6060ffdfffb3b922ba1396b312ae795e1de9d81d"
 dependencies = [
  "bitflags 2.13.0",
- "libc",
  "objc2 0.6.3",
  "objc2-core-foundation",
- "objc2-foundation 0.3.2",
 ]
 
 [[package]]
@@ -9414,7 +9374,6 @@ dependencies = [
  "dispatch2",
  "objc2 0.6.3",
  "objc2-foundation 0.3.2",
- "objc2-io-surface",
 ]
 
 [[package]]
@@ -10332,57 +10291,6 @@ dependencies = [
  "fdeflate",
  "flate2",
  "miniz_oxide",
-]
-
-[[package]]
-name = "pocket-apple"
-version = "0.1.0"
-dependencies = [
- "log",
- "pocket-mod",
- "pocket-ui-surface",
- "pocketjs-core",
- "rquickjs 0.12.2",
-]
-
-[[package]]
-name = "pocket-mod"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "pocketjs-core",
- "rquickjs 0.12.2",
-]
-
-[[package]]
-name = "pocket-ui-surface"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "pocket-mod",
- "pocketjs-core",
-]
-
-[[package]]
-name = "pocketjs-core"
-version = "0.1.0"
-dependencies = [
- "pocketjs-core",
- "taffy",
-]
-
-[[package]]
-name = "pocketjs_adapter"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "pocket-apple",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "warpeer_plugin_protocol",
 ]
 
 [[package]]
@@ -11515,15 +11423,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "relative-path"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bca40a312222d8ba74837cb474edef44b37f561da5f773981007a10bbaa992b0"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "remote_server"
 version = "0.1.0"
 dependencies = [
@@ -11792,17 +11691,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6db7788c2818f4546daabe9ae2d1ee2f4db61ab1998d4b483494c4193cc38dab"
 dependencies = [
- "rquickjs-core 0.3.1",
-]
-
-[[package]]
-name = "rquickjs"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e04e4eedfb060b503b5f0a2644abb890b0b3620d3fb674f9455f230014964e4"
-dependencies = [
- "rquickjs-core 0.12.2",
- "rquickjs-macro",
+ "rquickjs-core",
 ]
 
 [[package]]
@@ -11811,35 +11700,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b12cf8646fe0af5bcff2822ccd162990f0679a1f9287c7257f4f4193a9d31ea9"
 dependencies = [
- "rquickjs-sys 0.3.1",
-]
-
-[[package]]
-name = "rquickjs-core"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16e4f499ac5b943d97ee6dbc44f23c2c10426f420f7d2f1793d6318911b6608c"
-dependencies = [
- "hashbrown 0.17.1",
- "relative-path",
- "rquickjs-sys 0.12.2",
-]
-
-[[package]]
-name = "rquickjs-macro"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cbcc8219b70ee2faa08d5339f47f15741cba2ce0cb9640e8495f2ab51293f50"
-dependencies = [
- "convert_case 0.11.0",
- "fnv",
- "ident_case",
- "indexmap 2.12.0",
- "proc-macro-crate 3.3.0",
- "proc-macro2",
- "quote",
- "rquickjs-core 0.12.2",
- "syn 2.0.117",
+ "rquickjs-sys",
 ]
 
 [[package]]
@@ -11848,16 +11709,6 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b747058afd4d988d056e4972ec8516a5a86fdfc103c1c1485bfee8966a0743ae"
 dependencies = [
- "cc",
-]
-
-[[package]]
-name = "rquickjs-sys"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a13ac243b86a74120814ef7e9e30ad5a2c1199b7b9963b1cf7c84e4cdc1cad99"
-dependencies = [
- "bindgen 0.72.1",
  "cc",
 ]
 
@@ -12404,9 +12255,6 @@ name = "semver"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "836fa6a3e1e547f9a2c4040802ec865b5d85f4014efe00555d7090a3dcaa1090"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "send_wrapper"
@@ -13627,18 +13475,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fce91f2f0ec87dff7e6bcbbeb267439aa1188703003c6055193c821487400432"
 dependencies = [
  "unicode-width 0.2.1",
-]
-
-[[package]]
-name = "taffy"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfde4e2f8595f222ceaae1fb16b4963952e9b33e358869dc4cd6316b0e0790cd"
-dependencies = [
- "arrayvec",
- "grid",
- "serde",
- "slotmap",
 ]
 
 [[package]]
@@ -15518,7 +15354,6 @@ dependencies = [
  "persistence",
  "pin-project",
  "plist",
- "pocketjs_adapter",
  "pprof",
  "prost",
  "prost-build",
@@ -15533,7 +15368,7 @@ dependencies = [
  "repo_metadata",
  "reqwest",
  "rmcp",
- "rquickjs 0.3.1",
+ "rquickjs",
  "rust-embed 8.7.2",
  "rustc-hash 2.1.1",
  "rustls",
@@ -15630,10 +15465,6 @@ dependencies = [
  "warp_terminal",
  "warp_util",
  "warp_web_event_bus",
- "warpeer_plugin_protocol",
- "warpeer_plugin_runtime",
- "warpeer_plugin_surface_transport",
- "warpeer_plugin_worker",
  "warpui",
  "warpui_core",
  "warpui_extras",
@@ -15768,7 +15599,7 @@ dependencies = [
  "log",
  "memo-map",
  "regex",
- "rquickjs 0.3.1",
+ "rquickjs",
  "serde",
  "shellexpand",
  "smol_str",
@@ -15992,7 +15823,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "cfg-if",
- "rquickjs 0.3.1",
+ "rquickjs",
  "serde",
  "thiserror 2.0.17",
  "uuid",
@@ -16397,65 +16228,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "warpeer_plugin_protocol"
-version = "0.1.0"
-dependencies = [
- "semver",
- "serde",
- "serde_json",
- "thiserror 2.0.17",
- "uuid",
-]
-
-[[package]]
-name = "warpeer_plugin_runtime"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "image",
- "parking_lot",
- "reqwest",
- "semver",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.17",
- "tokio",
- "toml 0.8.23",
- "url",
- "uuid",
- "warpeer_plugin_protocol",
- "zip 2.4.2",
-]
-
-[[package]]
-name = "warpeer_plugin_surface_transport"
-version = "0.1.0"
-dependencies = [
- "objc2-core-foundation",
- "objc2-io-surface",
- "thiserror 2.0.17",
-]
-
-[[package]]
-name = "warpeer_plugin_worker"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "image",
- "pocketjs_adapter",
- "serde_json",
- "sysinfo",
- "tempfile",
- "toml 0.8.23",
- "url",
- "warpeer_plugin_protocol",
- "warpeer_plugin_runtime",
- "warpeer_plugin_surface_transport",
-]
-
-[[package]]
 name = "warpui"
 version = "0.0.0"
 dependencies = [
@@ -16518,7 +16290,6 @@ dependencies = [
  "objc2-av-foundation",
  "objc2-core-foundation",
  "objc2-foundation 0.3.2",
- "objc2-io-surface",
  "objc2-metal 0.3.2",
  "objc2-quartz-core 0.3.2",
  "open",

@@ -10,10 +10,6 @@ use dispatch2::DispatchData;
 use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2_foundation::NSString;
-#[cfg(feature = "external_surfaces")]
-use objc2_io_surface::IOSurfaceRef;
-#[cfg(feature = "external_surfaces")]
-use objc2_metal::MTLTextureUsage;
 use objc2_metal::{
     MTLBlendFactor, MTLBlendOperation, MTLBuffer, MTLClearColor, MTLCommandBuffer,
     MTLCommandEncoder, MTLCommandQueue, MTLDevice, MTLDrawable, MTLFunction, MTLIndexType,
@@ -558,25 +554,6 @@ impl<'a> Frame<'a> {
                 let height = asset.size().y() as usize;
 
                 let texture_descriptor = MTLTextureDescriptor::new();
-                #[cfg(feature = "external_surfaces")]
-                if let Some(image) = asset.io_surface()
-                    && let Some(surface) = IOSurfaceRef::lookup(image.surface_id)
-                    && surface.seed() >= image.seed
-                {
-                    texture_descriptor.setPixelFormat(MTLPixelFormat::BGRA8Unorm);
-                    texture_descriptor.setUsage(MTLTextureUsage::ShaderRead);
-                    unsafe {
-                        texture_descriptor.setWidth(width);
-                        texture_descriptor.setHeight(height);
-                    }
-                    if let Some(texture) = self.ctx.device.newTextureWithDescriptor_iosurface_plane(
-                        &texture_descriptor,
-                        &surface,
-                        0,
-                    ) {
-                        return texture;
-                    }
-                }
                 texture_descriptor.setPixelFormat(MTLPixelFormat::RGBA8Unorm);
                 // SAFETY: width/height come from a decoded asset and are within Metal limits.
                 unsafe {

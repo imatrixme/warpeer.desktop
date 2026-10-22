@@ -240,16 +240,6 @@ impl TerminalView {
                 detail,
             });
 
-            #[cfg(feature = "warpeer_plugins")]
-            if self.can_manually_preview_grid_image(link, model, app) {
-                links.push(GridTooltipLink {
-                    text: "Preview image".to_string(),
-                    action: self.preview_grid_image_action(link, None),
-                    mouse_state: self.mouse_states.preview_grid_image_tooltip.clone(),
-                    detail: Some("[Keeps open]".to_string()),
-                });
-            }
-
             links.extend(open_in_warp);
             links.extend(show_in_file_explorer);
         }

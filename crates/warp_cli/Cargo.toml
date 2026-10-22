@@ -34,7 +34,6 @@ cfg_aliases.workspace = true
 [features]
 local_control = ["dep:local_control"]
 plugin_host = []
-warpeer_plugins = []
 integration_tests = []
 
 

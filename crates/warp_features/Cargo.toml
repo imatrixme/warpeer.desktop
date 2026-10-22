@@ -8,6 +8,7 @@ license.workspace = true
 
 [features]
 integration_tests = []
+terminal_only = []
 test-util = []
 
 [dependencies]

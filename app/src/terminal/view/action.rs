@@ -9,8 +9,6 @@ use pathfinder_geometry::vector::Vector2F;
 use session_sharing_protocol::common::Role;
 use session_sharing_protocol::sharer::RoleUpdateReason;
 use warp_util::user_input::UserInput;
-#[cfg(feature = "warpeer_plugins")]
-use warpeer_plugin_protocol::{ChromeActionSource, ChromeMenuItem, ContainerId, PageId, Revision};
 use warpui::EntityId;
 use warpui::elements::HyperlinkUrl;
 use warpui::event::ModifiersState;
@@ -148,7 +146,6 @@ pub enum TerminalAction {
     MiddleClickOnInput,
     MaybeLinkHover {
         position: Option<WithinModel<Point>>,
-        pointer: Option<Vector2F>,
         from_editor: TerminalEditor,
     },
     MaybeHoverSecret {
@@ -273,38 +270,6 @@ pub enum TerminalAction {
     NotificationsErrorBanner(NotificationsErrorBannerAction),
     JumpToBookmark(BlockIndex),
     OpenGridLink(GridHighlightedLink),
-    #[cfg(feature = "warpeer_plugins")]
-    PreviewGridImage {
-        link: GridHighlightedLink,
-        position: WithinModel<Point>,
-        pointer: Option<Vector2F>,
-    },
-    #[cfg(feature = "warpeer_plugins")]
-    ClosePluginPreview,
-    #[cfg(feature = "warpeer_plugins")]
-    PluginPreviewSurfaceHover {
-        is_hovered: bool,
-    },
-    #[cfg(feature = "warpeer_plugins")]
-    OpenPluginChromeMenu {
-        container_id: ContainerId,
-        page_id: PageId,
-        revision: Revision,
-        action_id: String,
-        label: String,
-        position_id: String,
-        items: Vec<ChromeMenuItem>,
-    },
-    #[cfg(feature = "warpeer_plugins")]
-    ActivatePluginChromeAction {
-        container_id: ContainerId,
-        page_id: PageId,
-        revision: Revision,
-        action_id: String,
-        menu_item_id: Option<String>,
-        label: String,
-        source: ChromeActionSource,
-    },
     OpenRichContentLink(RichContentLink),
     ToggleGridSecret {
         handle: WithinModel<SecretHandle>,
@@ -559,11 +524,10 @@ impl fmt::Debug for TerminalAction {
             ),
             MaybeLinkHover {
                 position,
-                pointer,
                 from_editor,
             } => write!(
                 f,
-                "MaybeLinkHover {{ position: {position:?}, pointer: {pointer:?}, from_editor: {from_editor:?} }}"
+                "MaybeLinkHover {{ position: {position:?}, from_editor: {from_editor:?} }}"
             ),
             MaybeHoverSecret { secret_handle } => {
                 write!(f, "MaybeHoverSecret {{ secret_handle: {secret_handle:?} }}")
@@ -653,27 +617,6 @@ impl fmt::Debug for TerminalAction {
                 write!(f, "InsertCommandCorrection",)
             }
             OpenGridLink(_) => f.write_str("OpenGridLink"),
-            #[cfg(feature = "warpeer_plugins")]
-            PreviewGridImage { .. } => f.write_str("PreviewGridImage"),
-            #[cfg(feature = "warpeer_plugins")]
-            ClosePluginPreview => f.write_str("ClosePluginPreview"),
-            #[cfg(feature = "warpeer_plugins")]
-            PluginPreviewSurfaceHover { is_hovered } => {
-                write!(f, "PluginPreviewSurfaceHover({is_hovered})")
-            }
-            #[cfg(feature = "warpeer_plugins")]
-            OpenPluginChromeMenu { action_id, .. } => {
-                write!(f, "OpenPluginChromeMenu({action_id})")
-            }
-            #[cfg(feature = "warpeer_plugins")]
-            ActivatePluginChromeAction {
-                action_id,
-                menu_item_id,
-                ..
-            } => write!(
-                f,
-                "ActivatePluginChromeAction({action_id}, {menu_item_id:?})"
-            ),
             OpenRichContentLink(_) => f.write_str("OpenRichContentLink"),
             ToggleGridSecret { show_secret, .. } => write!(f, "ToggleGridSecret {show_secret:?}"),
             ToggleRichContentSecret { show_secret, .. } => {

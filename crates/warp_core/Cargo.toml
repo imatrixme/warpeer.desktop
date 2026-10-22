@@ -9,6 +9,7 @@ license.workspace = true
 integration_tests = []
 local_fs = []
 release_bundle = []
+terminal_only = ["warp_features/terminal_only"]
 # Enabled when building the self-contained standalone CLI binary (see the bundle
 # script). Keep in sync with the `app` crate's `standalone` feature.
 standalone = []

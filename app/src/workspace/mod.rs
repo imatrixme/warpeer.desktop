@@ -15,8 +15,6 @@ mod home;
 mod lightbox_view;
 mod native_modal;
 mod one_time_modal_model;
-#[cfg(feature = "warpeer_plugins")]
-mod plugin_diagnostics;
 mod registry;
 pub mod rewind_confirmation_dialog;
 pub mod sync_inputs;

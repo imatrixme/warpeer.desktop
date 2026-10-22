@@ -113,8 +113,6 @@ mod vim_registers;
 mod voice;
 mod voltron;
 mod warp_managed_paths_watcher;
-#[cfg(feature = "warpeer_plugins")]
-mod warpeer_plugin;
 #[cfg(target_family = "wasm")]
 mod wasm_nux_dialog;
 mod window_settings;
@@ -895,12 +893,6 @@ fn run_worker_command(worker: &warp_cli::WorkerCommand) -> Result<()> {
         }
         #[cfg(feature = "plugin_host")]
         warp_cli::WorkerCommand::PluginHost { .. } => crate::run_plugin_host(),
-        #[cfg(feature = "warpeer_plugins")]
-        warp_cli::WorkerCommand::WarpeerPluginWorker {
-            plugin_id,
-            package_root,
-            execution_slice_ms,
-        } => warpeer_plugin_worker::run(plugin_id, package_root, *execution_slice_ms),
         #[cfg(feature = "local_tty")]
         warp_cli::WorkerCommand::MinidumpServer { socket_name } => {
             cfg_if::cfg_if! {
@@ -1389,11 +1381,6 @@ fn run_internal(mut launch_mode: LaunchMode) -> Result<()> {
         #[cfg(feature = "plugin_host")]
         ctx.add_singleton_model(move |ctx| {
             plugin::PluginHost::new(ctx).expect("Could not instantiate PluginHost")
-        });
-        #[cfg(feature = "warpeer_plugins")]
-        ctx.add_singleton_model(move |ctx| {
-            warpeer_plugin::WarpeerPluginHost::new(ctx)
-                .expect("Could not instantiate WarpeerPluginHost")
         });
         let app_state = initialize_app(
             &launch_mode,

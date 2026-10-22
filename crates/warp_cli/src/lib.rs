@@ -508,18 +508,6 @@ pub enum WorkerCommand {
         parent: ParentOpts,
     },
 
-    /// Run one isolated Warpeer PocketJS surface plugin.
-    #[cfg(feature = "warpeer_plugins")]
-    #[clap(long_flag = "warpeer-plugin-worker", hide = true)]
-    WarpeerPluginWorker {
-        #[arg(long)]
-        plugin_id: String,
-        #[arg(long)]
-        package_root: std::path::PathBuf,
-        #[arg(long)]
-        execution_slice_ms: u32,
-    },
-
     /// Run the minidump server.
     #[clap(hide = true)]
     MinidumpServer {

@@ -3,12 +3,6 @@ use std::collections::HashMap;
 use std::error;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::rc::Rc;
-#[cfg(all(
-    feature = "integration_tests",
-    feature = "external_surfaces",
-    target_os = "macos"
-))]
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock};
 
 use anyhow::{Result, anyhow};
@@ -321,11 +315,7 @@ impl Asset for ImageType {
                 ));
             };
             return Ok(ImageType::StaticBitmap {
-                image: Arc::new(StaticImage {
-                    img,
-                    #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                    io_surface: None,
-                }),
+                image: Arc::new(StaticImage { img }),
             });
         }
 
@@ -338,11 +328,7 @@ impl Asset for ImageType {
                 .decode()?
                 .into_rgba8();
                 Ok(ImageType::StaticBitmap {
-                    image: Arc::new(StaticImage {
-                        img,
-                        #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                        io_surface: None,
-                    }),
+                    image: Arc::new(StaticImage { img }),
                 })
             }
             Ok(ImageFormat::Png) => {
@@ -353,11 +339,7 @@ impl Asset for ImageType {
                 .decode()?
                 .into_rgba8();
                 Ok(ImageType::StaticBitmap {
-                    image: Arc::new(StaticImage {
-                        img,
-                        #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                        io_surface: None,
-                    }),
+                    image: Arc::new(StaticImage { img }),
                 })
             }
             Ok(ImageFormat::WebP) => {
@@ -370,11 +352,7 @@ impl Asset for ImageType {
                 } else {
                     let img = DynamicImage::from_decoder(decoder)?.into_rgba8();
                     Ok(ImageType::StaticBitmap {
-                        image: Arc::new(StaticImage {
-                            img,
-                            #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                            io_surface: None,
-                        }),
+                        image: Arc::new(StaticImage { img }),
                     })
                 }
             }
@@ -415,53 +393,9 @@ pub enum Image {
 pub struct StaticImage {
     /// The actual RGBA image data, stored as a vector of bytes.
     img: image::RgbaImage,
-    #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-    io_surface: Option<IoSurfaceImage>,
-}
-
-#[cfg(all(
-    feature = "integration_tests",
-    feature = "external_surfaces",
-    target_os = "macos"
-))]
-static LIVE_EXTERNAL_IMAGE_BYTES: AtomicU64 = AtomicU64::new(0);
-
-#[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct IoSurfaceImage {
-    pub surface_id: u32,
-    pub seed: u32,
 }
 
 impl StaticImage {
-    pub fn from_rgba(width: u32, height: u32, pixels: Vec<u8>) -> Option<Arc<Self>> {
-        image::RgbaImage::from_raw(width, height, pixels).map(|img| {
-            Arc::new(Self {
-                img,
-                #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                io_surface: None,
-            })
-        })
-    }
-
-    #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-    pub fn from_io_surface(
-        width: u32,
-        height: u32,
-        surface_id: u32,
-        seed: u32,
-        fallback_rgba: Vec<u8>,
-    ) -> Option<Arc<Self>> {
-        image::RgbaImage::from_raw(width, height, fallback_rgba).map(|img| {
-            #[cfg(feature = "integration_tests")]
-            LIVE_EXTERNAL_IMAGE_BYTES.fetch_add(img.len() as u64, Ordering::AcqRel);
-            Arc::new(Self {
-                img,
-                io_surface: Some(IoSurfaceImage { surface_id, seed }),
-            })
-        })
-    }
-
     pub fn size(&self) -> Vector2I {
         Vector2I::new(self.width() as i32, self.height() as i32)
     }
@@ -477,33 +411,6 @@ impl StaticImage {
     pub fn rgba_bytes(&self) -> &[u8] {
         self.img.as_raw().as_slice()
     }
-
-    #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-    pub fn io_surface(&self) -> Option<IoSurfaceImage> {
-        self.io_surface
-    }
-}
-
-#[cfg(all(
-    feature = "integration_tests",
-    feature = "external_surfaces",
-    target_os = "macos"
-))]
-impl Drop for StaticImage {
-    fn drop(&mut self) {
-        if self.io_surface.is_some() {
-            LIVE_EXTERNAL_IMAGE_BYTES.fetch_sub(self.img.len() as u64, Ordering::AcqRel);
-        }
-    }
-}
-
-#[cfg(all(
-    feature = "integration_tests",
-    feature = "external_surfaces",
-    target_os = "macos"
-))]
-pub fn live_external_image_bytes() -> u64 {
-    LIVE_EXTERNAL_IMAGE_BYTES.load(Ordering::Acquire)
 }
 
 /// A representation of a single frame in an animated image.
@@ -612,8 +519,6 @@ impl From<Vec<Frame>> for AnimatedImage {
                 AnimatedImageFrame {
                     image: Arc::new(StaticImage {
                         img: frame.into_buffer(),
-                        #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                        io_surface: None,
                     }),
                     delay: delay_ms,
                 }
@@ -635,8 +540,6 @@ fn resize_animated_image(
         .map(|frame| AnimatedImageFrame {
             image: Arc::new(StaticImage {
                 img: resize_image(&frame.image.img, bounds, fit_type),
-                #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                io_surface: None,
             }),
             delay: frame.delay,
         })
@@ -669,11 +572,7 @@ fn svg_image(svg: &Rc<usvg::Tree>, bounds: Vector2I, fit_type: FitType) -> Resul
 
     let img = image::RgbaImage::from_vec(pixmap.width(), pixmap.height(), pixmap.take()).ok_or_else(|| anyhow!("Failed to convert tiny_skia::Pixmap into image::ImageBuffer due to buffer size mismatch"))?;
 
-    Ok(Image::Static(Arc::new(StaticImage {
-        img,
-        #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-        io_surface: None,
-    })))
+    Ok(Image::Static(Arc::new(StaticImage { img })))
 }
 
 fn resize_image(img: &image::RgbaImage, bounds: Vector2I, fit_type: FitType) -> image::RgbaImage {
@@ -786,11 +685,7 @@ impl ImageType {
             ImageType::StaticBitmap { image } => {
                 if resize {
                     let img = resize_image(&image.img, bounds, fit_type);
-                    Ok(Image::Static(Arc::new(StaticImage {
-                        img,
-                        #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                        io_surface: None,
-                    })))
+                    Ok(Image::Static(Arc::new(StaticImage { img })))
                 } else {
                     Ok(Image::Static(image.clone()))
                 }
@@ -816,11 +711,7 @@ impl ImageType {
                         .clone();
                     if resize {
                         let img = resize_image(&first_frame.img, bounds, fit_type);
-                        Ok(Image::Static(Arc::new(StaticImage {
-                            img,
-                            #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-                            io_surface: None,
-                        })))
+                        Ok(Image::Static(Arc::new(StaticImage { img })))
                     } else {
                         Ok(Image::Static(first_frame))
                     }
@@ -1104,8 +995,6 @@ pub(crate) mod test_utils {
     pub(crate) fn make_static_image(width: u32, height: u32) -> Arc<StaticImage> {
         Arc::new(StaticImage {
             img: image::RgbaImage::new(width, height),
-            #[cfg(all(target_os = "macos", feature = "external_surfaces"))]
-            io_surface: None,
         })
     }
 }

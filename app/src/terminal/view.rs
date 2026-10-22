@@ -39,8 +39,6 @@ mod open_in_warp;
 mod pane_impl;
 mod passive_suggestions;
 mod pending_user_query;
-#[cfg(feature = "warpeer_plugins")]
-mod plugin_hover;
 #[cfg(not(target_family = "wasm"))]
 pub(crate) mod plugin_instructions_block;
 pub mod rich_content;
@@ -2353,8 +2351,6 @@ pub struct TerminalViewRenderContext {
 #[derive(Default)]
 struct TerminalViewMouseStates {
     grid_link_tooltip: MouseStateHandle,
-    #[cfg(feature = "warpeer_plugins")]
-    preview_grid_image_tooltip: MouseStateHandle,
     rich_content_link_tooltip: MouseStateHandle,
 
     // Shared across Grid and Rich Content secrets tooltips (only 1 can be open at a time).
@@ -2504,8 +2500,6 @@ struct LocalSessionCanonicalPwdCache {
 
 pub struct TerminalView {
     pub model: Arc<FairMutex<TerminalModel>>,
-    #[cfg(feature = "warpeer_plugins")]
-    plugin_hover: plugin_hover::PluginHoverState,
     #[cfg(feature = "terminal_visuals")]
     terminal_visual_runtime: Rc<RefCell<crate::terminal::visual_runtime::TerminalVisualRuntime>>,
     #[cfg(feature = "terminal_visuals")]
@@ -2598,9 +2592,6 @@ pub struct TerminalView {
     mouse_down_block_index: Option<BlockIndex>,
 
     mouse_states: TerminalViewMouseStates,
-
-    #[cfg(feature = "warpeer_plugins")]
-    plugin_hover_close_button: ViewHandle<ActionButton>,
 
     server_api: Arc<ServerApi>,
     auth_state: Arc<AuthState>,
@@ -4333,15 +4324,6 @@ impl TerminalView {
                 })
         });
 
-        #[cfg(feature = "warpeer_plugins")]
-        let plugin_hover_close_button = ctx.add_typed_action_view(|_ctx| {
-            ActionButton::new("", crate::view_components::action_button::NakedTheme)
-                .with_icon(icons::Icon::X)
-                .with_size(ButtonSize::XSmall)
-                .with_tooltip("Close image preview")
-                .on_click(|ctx| ctx.dispatch_typed_action(TerminalAction::ClosePluginPreview))
-        });
-
         // Conversation details panel (cloud Oz runs and any active local AI conversation).
         let conversation_details_panel = ctx.add_typed_action_view(|ctx| {
             crate::ai::conversation_details_panel::ConversationDetailsPanel::new(
@@ -4365,11 +4347,6 @@ impl TerminalView {
         });
 
         let window_id = ctx.window_id();
-        #[cfg(feature = "warpeer_plugins")]
-        ctx.observe(
-            &crate::warpeer_plugin::WarpeerPluginHost::handle(ctx),
-            |_, _, ctx| ctx.notify(),
-        );
         #[cfg(feature = "terminal_visuals")]
         let (terminal_visual_runtime, terminal_input_visual_runtime) = {
             let theme = Appearance::as_ref(ctx).theme();
@@ -4422,10 +4399,6 @@ impl TerminalView {
         }
         let mut terminal_view = Self {
             model,
-            #[cfg(feature = "warpeer_plugins")]
-            plugin_hover: plugin_hover::PluginHoverState::new(ctx),
-            #[cfg(feature = "warpeer_plugins")]
-            plugin_hover_close_button,
             #[cfg(feature = "terminal_visuals")]
             terminal_visual_runtime,
             #[cfg(feature = "terminal_visuals")]
@@ -17115,21 +17088,6 @@ impl TerminalView {
                     }
                 };
 
-                #[cfg(feature = "warpeer_plugins")]
-                if self.can_manually_preview_grid_image(highlighted_link, &model, ctx) {
-                    let pointer = ContextMenuType::BlockList {
-                        menu_source: *menu_source,
-                    }
-                    .origin();
-                    items.push(
-                        MenuItemFields::new("Preview image")
-                            .with_on_select_action(
-                                self.preview_grid_image_action(highlighted_link, pointer),
-                            )
-                            .into_item(),
-                    );
-                }
-
                 if !items.is_empty() {
                     items.push(MenuItem::Separator);
                 }
@@ -27213,19 +27171,6 @@ impl TypedActionView for TerminalView {
             | ToggleAIDocumentPane
             | ClearMarkedText
             | StartLspServer => ActionAccessibilityContent::from_debug(),
-            #[cfg(feature = "warpeer_plugins")]
-            OpenPluginChromeMenu { label, .. } => Custom(AccessibilityContent::new_without_help(
-                label.clone(),
-                WarpA11yRole::PopoverRole,
-            )),
-            #[cfg(feature = "warpeer_plugins")]
-            ActivatePluginChromeAction { label, .. } => Custom(
-                AccessibilityContent::new_without_help(label.clone(), WarpA11yRole::ButtonRole),
-            ),
-            #[cfg(feature = "warpeer_plugins")]
-            PreviewGridImage { .. } | ClosePluginPreview | PluginPreviewSurfaceHover { .. } => {
-                ActionAccessibilityContent::from_debug()
-            }
             #[cfg(feature = "local_fs")]
             OpenCodeInWarp { .. } => ActionAccessibilityContent::from_debug(),
             OpenInWarpBanner(action) => self.open_in_warp_banner_accessibility_content(*action),
@@ -27355,19 +27300,6 @@ impl TypedActionView for TerminalView {
         use TerminalAction::*;
         let input_mode = *InputModeSettings::as_ref(ctx).input_mode.value();
 
-        #[cfg(feature = "warpeer_plugins")]
-        if matches!(
-            action,
-            Scroll { .. }
-                | AltScroll { .. }
-                | ScrollToTopOfBlock { .. }
-                | ScrollToTopOfSelectedBlocks
-                | ScrollToBottomOfSelectedBlocks
-                | ScrollToBottomOfOverhangingBlock(_)
-        ) {
-            self.cancel_transient_plugin_hover(ctx);
-        }
-
         #[cfg(feature = "terminal_visuals")]
         if !matches!(action, Scroll { .. } | GlideScroll { .. }) {
             self.scroll_glide_generation = self.scroll_glide_generation.wrapping_add(1);
@@ -27406,15 +27338,12 @@ impl TypedActionView for TerminalView {
                 position,
                 modifiers,
             } => {
-                #[cfg(feature = "warpeer_plugins")]
-                self.cancel_transient_plugin_hover(ctx);
                 self.click_on_grid(position, modifiers, ctx);
             }
             MaybeLinkHover {
                 position,
-                pointer,
                 from_editor,
-            } => self.maybe_link_hover(position, *pointer, *from_editor, ctx),
+            } => self.maybe_link_hover(position, *from_editor, ctx),
             MaybeHoverSecret { secret_handle } => self.maybe_hover_secret(*secret_handle, ctx),
             MaybeDismissToolTip { from_keybinding } => {
                 if !self.dismiss_tooltips(ctx) && *from_keybinding {
@@ -27675,59 +27604,6 @@ impl TypedActionView for TerminalView {
             OpenGridLink(link) => {
                 self.open_highlighted_link(link, ctx);
             }
-            #[cfg(feature = "warpeer_plugins")]
-            PreviewGridImage {
-                link,
-                position,
-                pointer,
-            } => {
-                self.preview_grid_image(link, *position, *pointer, ctx);
-            }
-            #[cfg(feature = "warpeer_plugins")]
-            ClosePluginPreview => {
-                self.cancel_plugin_hover(ctx);
-            }
-            #[cfg(feature = "warpeer_plugins")]
-            PluginPreviewSurfaceHover { is_hovered } => {
-                self.plugin_preview_surface_hover_changed(*is_hovered, ctx);
-            }
-            #[cfg(feature = "warpeer_plugins")]
-            OpenPluginChromeMenu {
-                container_id,
-                page_id,
-                revision,
-                action_id,
-                label,
-                position_id,
-                items,
-            } => self.open_plugin_chrome_menu(
-                *container_id,
-                *page_id,
-                *revision,
-                action_id.clone(),
-                label.clone(),
-                position_id.clone(),
-                items,
-                ctx,
-            ),
-            #[cfg(feature = "warpeer_plugins")]
-            ActivatePluginChromeAction {
-                container_id,
-                page_id,
-                revision,
-                action_id,
-                menu_item_id,
-                source,
-                ..
-            } => self.activate_plugin_chrome_action(
-                *container_id,
-                *page_id,
-                *revision,
-                action_id.clone(),
-                menu_item_id.clone(),
-                *source,
-                ctx,
-            ),
             OpenRichContentLink(link) => {
                 self.open_rich_content_link(link, ctx);
             }
@@ -28723,9 +28599,6 @@ impl View for TerminalView {
             }
         };
 
-        #[cfg(feature = "warpeer_plugins")]
-        self.render_plugin_hover(&mut stack, app);
-
         if self.is_any_tooltip_open() {
             self.render_grid_tooltip(&mut stack, &model, appearance, app);
         }
@@ -29150,12 +29023,6 @@ impl View for TerminalView {
             // Make sure to close link tooltips when terminal view is not in focus.
             self.open_grid_link_tool_tip.take();
 
-            #[cfg(feature = "warpeer_plugins")]
-            self.plugin_hover.release_drag_capture();
-
-            #[cfg(feature = "warpeer_plugins")]
-            self.cancel_transient_plugin_hover(ctx);
-
             #[cfg(feature = "warpeer")]
             if let Some(header) = self.worktree_agent_header.as_ref() {
                 header.update(
@@ -29512,9 +29379,6 @@ impl MenuPositioningProvider for TerminalViewMenuPositioningProvider {
 
 impl Drop for TerminalView {
     fn drop(&mut self) {
-        #[cfg(feature = "warpeer_plugins")]
-        self.plugin_hover.cancel();
-
         if let Some((is_bootstrapped, pending_shell, has_pending_ssh_session)) =
             self.model.try_lock().map(|model| {
                 (

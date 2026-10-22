@@ -11,8 +11,6 @@ mod drag;
 pub mod drag_resize;
 mod empty;
 mod event_handler;
-#[cfg(feature = "external_surfaces")]
-mod external_surface;
 mod flex;
 mod formatted_text_element;
 mod hoverable;
@@ -55,8 +53,6 @@ pub use drag::*;
 pub use drag_resize::*;
 pub use empty::*;
 pub use event_handler::*;
-#[cfg(feature = "external_surfaces")]
-pub use external_surface::*;
 pub use flex::*;
 pub use formatted_text_element::*;
 pub use hoverable::*;

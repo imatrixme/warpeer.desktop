@@ -51,57 +51,10 @@ impl ProductProfile {
     }
 
     pub(crate) fn allows_feature(self, flag: FeatureFlag) -> bool {
-        if self == Self::FullWarp {
-            return true;
+        match self {
+            Self::FullWarp => true,
+            Self::TerminalOnly => flag.allowed_in_terminal_only(),
         }
-
-        matches!(
-            flag,
-            FeatureFlag::ThinStrokes
-                | FeatureFlag::Ligatures
-                | FeatureFlag::CommandCorrectionKey
-                | FeatureFlag::CommandCorrectionsHistoryRule
-                | FeatureFlag::ClassicCompletions
-                | FeatureFlag::ForceClassicCompletions
-                | FeatureFlag::RemoveAutosuggestionDuringTabCompletions
-                | FeatureFlag::ResizeFix
-                | FeatureFlag::DefaultWaterfallMode
-                | FeatureFlag::SelectablePrompt
-                | FeatureFlag::RectSelection
-                | FeatureFlag::AlacrittySettingsImport
-                | FeatureFlag::ShellSelector
-                | FeatureFlag::LazySceneBuilding
-                | FeatureFlag::FullScreenZenMode
-                | FeatureFlag::MinimalistUI
-                | FeatureFlag::NativeShellCompletions
-                | FeatureFlag::DragTabsToWindows
-                | FeatureFlag::OscHyperlinks
-                | FeatureFlag::ImeMarkedText
-                | FeatureFlag::ITermImages
-                | FeatureFlag::ValidateAutosuggestions
-                | FeatureFlag::ClearAutosuggestionOnEscape
-                | FeatureFlag::KittyImages
-                | FeatureFlag::UndoClosedPanes
-                | FeatureFlag::UIZoom
-                | FeatureFlag::AsyncFind
-                | FeatureFlag::ConfigurableToolbar
-                | FeatureFlag::NewTabStyling
-                | FeatureFlag::KittyKeyboardProtocol
-                | FeatureFlag::DirectoryTabColors
-                | FeatureFlag::TabConfigs
-                | FeatureFlag::VerticalTabs
-                | FeatureFlag::VerticalTabsSummaryMode
-                | FeatureFlag::GroupedTabs
-                | FeatureFlag::PinnedTabs
-                | FeatureFlag::TerminalLifecycleRecovery
-                | FeatureFlag::BoxDrawingGlyphs
-                | FeatureFlag::SettingsFile
-                | FeatureFlag::GlobalSearch
-                | FeatureFlag::CodeReviewSaveChanges
-                | FeatureFlag::CodeReviewFind
-                | FeatureFlag::CodeReviewScrollPreservation
-                | FeatureFlag::GitOperationsInCodeReview
-        )
     }
 
     pub(crate) fn default_enabled_features(self) -> &'static [FeatureFlag] {
@@ -129,8 +82,15 @@ pub(crate) fn activate_terminal_only() -> Result<(), ProductProfile> {
     ACTIVE_PROFILE.set(ProductProfile::TerminalOnly)
 }
 
+#[cfg(not(feature = "warpeer"))]
 pub(crate) fn active() -> ProductProfile {
     ACTIVE_PROFILE.get().copied().unwrap_or_default()
+}
+
+/// A `warpeer` build is always terminal-only, so the profile is a constant the optimizer can fold.
+#[cfg(feature = "warpeer")]
+pub(crate) fn active() -> ProductProfile {
+    ProductProfile::TerminalOnly
 }
 
 pub(crate) fn is_terminal_only() -> bool {

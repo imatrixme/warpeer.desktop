@@ -476,12 +476,6 @@ pub enum WorkspaceAction {
     ShowHeaderToolbarContextMenu {
         position: Vector2F,
     },
-    #[cfg(feature = "warpeer_plugins")]
-    TogglePluginDiagnostics,
-    #[cfg(feature = "warpeer_plugins")]
-    ClearPluginDiagnostics,
-    #[cfg(feature = "warpeer_plugins")]
-    ClosePluginDiagnostics,
     Reauth,
     SignupAnonymousUser,
     SignInAnonymousWebUser,
@@ -1110,8 +1104,6 @@ impl WorkspaceAction {
             | ToggleTerminalMaterialSubstrate
             | ToggleTerminalCommandGutter
             | ToggleTerminalBlockDepth => false,
-            #[cfg(feature = "warpeer_plugins")]
-            TogglePluginDiagnostics | ClearPluginDiagnostics | ClosePluginDiagnostics => false,
             #[cfg(feature = "warpeer")]
             LockTab(_)
             | UnlockTab(_)

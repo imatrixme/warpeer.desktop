@@ -7,7 +7,7 @@ Copyright (C) 2020-2026 Denver Technologies, Inc.
 Warpeer is based on Warp upstream commit 17f4ec80ffa80749be035b2c2405e0f180a60e2e.
 The modifications turn Warp into a terminal-only product: account, cloud, hosted AI,
 telemetry, and auto-update features are removed or disabled, and Warpeer-specific
-terminal, pane, theme, privacy, and plugin features are added.
+terminal, pane, theme, and privacy features are added.
 
 Licensing:
 

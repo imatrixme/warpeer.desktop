@@ -358,11 +358,6 @@ warp-command-signatures.workspace = true
 is_executable = "1.0.1"
 watcher.workspace = true
 warp_files.workspace = true
-warpeer_plugin_protocol = { workspace = true, optional = true }
-warpeer_plugin_runtime = { workspace = true, optional = true }
-pocketjs_adapter = { workspace = true, optional = true }
-warpeer_plugin_worker = { workspace = true, optional = true }
-warpeer_plugin_surface_transport = { workspace = true, optional = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 console_error_panic_hook = { version = "0.1.6" }
@@ -825,23 +820,14 @@ hosted_onboarding = ["dep:onboarding"]
 hosted_uploads = ["dep:crc"]
 warpeer_assets = ["warp_assets/warpeer"]
 terminal_visuals = ["warpui/terminal_visuals", "warpui_core/terminal_visuals"]
-warpeer_plugins = [
-    "dep:pocketjs_adapter",
-    "dep:warpeer_plugin_protocol",
-    "dep:warpeer_plugin_runtime",
-    "dep:warpeer_plugin_worker",
-    "dep:warpeer_plugin_surface_transport",
-    "warp_cli/warpeer_plugins",
-    "warpui/external_surfaces",
-]
 warpeer = [
     "dep:block2",
+    "warp_core/terminal_only",
     "dep:objc2-local-authentication",
     "dep:pbkdf2",
     "dep:subtle",
     "warpeer_assets",
     "terminal_visuals",
-    "warpeer_plugins",
     "ligatures",
     "command_correction_key",
     "classic_completions",

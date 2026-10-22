@@ -39,12 +39,6 @@ pub mod themes;
 pub mod type_getters;
 pub mod view_getters;
 pub mod warp_drive;
-#[cfg(feature = "warpeer_plugins")]
-pub mod warpeer_plugin_hover;
-#[cfg(feature = "warpeer_plugins")]
-pub mod warpeer_plugin_lifecycle;
-#[cfg(feature = "warpeer_plugins")]
-pub mod warpeer_plugins;
 pub mod window;
 pub mod workflow;
 pub mod workspace;

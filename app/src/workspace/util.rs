@@ -41,8 +41,6 @@ pub(super) struct WorkspaceMouseStates {
     pub(super) pane_layout_picker: MouseStateHandle,
     #[cfg(feature = "warpeer")]
     pub(super) tab_privacy: MouseStateHandle,
-    #[cfg(feature = "warpeer_plugins")]
-    pub(super) plugin_diagnostics: MouseStateHandle,
     pub(super) session_config_tab_config_chip_close: MouseStateHandle,
     pub(super) tools_panel_icon: MouseStateHandle,
     pub(super) title_bar_search_bar: MouseStateHandle,

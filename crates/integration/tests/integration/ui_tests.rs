@@ -12,14 +12,6 @@ integration_tests! {
     #[cfg(feature = "warpeer")]
     test_warpeer_settings_tab_cannot_be_locked,
     #[cfg(feature = "warpeer")]
-    test_warpeer_plugins_settings_lifecycle,
-    #[cfg(feature = "warpeer")]
-    test_warpeer_image_preview_end_to_end,
-    #[cfg(feature = "warpeer")]
-    test_warpeer_image_preview_from_ls_hover,
-    #[cfg(feature = "warpeer")]
-    test_warpeer_image_preview_resource_plateau,
-    #[cfg(feature = "warpeer")]
     test_warpeer_worktree_agent_native_resume,
     test_add_many_sessions,
     test_ctrl_tab_session_switching,

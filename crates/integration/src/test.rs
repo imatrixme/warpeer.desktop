@@ -40,8 +40,6 @@ mod sync_inputs;
 mod tab_privacy;
 mod typeahead;
 mod video_recording;
-#[cfg(feature = "warpeer")]
-mod warpeer_plugins;
 mod websockets;
 mod workflows;
 mod workspace;
@@ -198,8 +196,6 @@ use warp::workspace::{
     NEW_SESSION_MENU_BUTTON_POSITION_ID, NEW_TAB_BUTTON_POSITION_ID, Workspace, WorkspaceAction,
 };
 use warp::{AgentModeEntrypoint, cmd_or_ctrl_shift};
-#[cfg(feature = "warpeer")]
-pub use warpeer_plugins::*;
 use warpui_core::event::KeyState;
 use warpui_core::integration::{AssertionOutcome, StepData, TestStep};
 use warpui_core::keymap::{Keystroke, PerPlatformKeystroke, Trigger};

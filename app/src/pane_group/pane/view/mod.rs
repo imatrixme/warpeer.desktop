@@ -151,8 +151,6 @@ pub struct PaneView<P: BackingView> {
     is_being_dragged: bool,
     focus_handle: Option<PaneFocusHandle>,
     hover_state: MouseStateHandle,
-    #[cfg(feature = "warpeer_plugins")]
-    plugin_surfaces: crate::warpeer_plugin::PanePluginSurfaceState,
 }
 
 impl<P: BackingView> PaneView<P> {
@@ -163,11 +161,6 @@ impl<P: BackingView> PaneView<P> {
         pane_configuration: ModelHandle<PaneConfiguration>,
         ctx: &mut ViewContext<Self>,
     ) -> Self {
-        #[cfg(feature = "warpeer_plugins")]
-        ctx.observe(
-            &crate::warpeer_plugin::WarpeerPluginHost::handle(ctx),
-            |_, _, ctx| ctx.notify(),
-        );
         // Create the pane stack model
         let pane_stack = ctx.add_model(|ctx| PaneStack::new(child_data, child, ctx));
 
@@ -205,11 +198,6 @@ impl<P: BackingView> PaneView<P> {
             is_being_dragged: false,
             focus_handle: None,
             hover_state: MouseStateHandle::default(),
-            #[cfg(feature = "warpeer_plugins")]
-            plugin_surfaces: crate::warpeer_plugin::PanePluginSurfaceState::new(
-                pane_id.to_string(),
-                ctx,
-            ),
         }
     }
 
@@ -513,11 +501,6 @@ impl<P: BackingView> View for PaneView<P> {
         let pane_id = self.pane_id;
         let indicator_enabled = *PaneSettings::as_ref(app).show_active_pane_indicator;
         let pane_is_active = pane_configuration.show_active_pane_indicator;
-        #[cfg(feature = "warpeer_plugins")]
-        let pane_contents =
-            self.plugin_surfaces
-                .render(container.finish(), split_pane_state.is_focused(), app);
-        #[cfg(not(feature = "warpeer_plugins"))]
         let pane_contents = container.finish();
         let pane = Hoverable::new(self.hover_state.clone(), move |mouse_state| {
             let pane_contents = if let Some(opacity) =

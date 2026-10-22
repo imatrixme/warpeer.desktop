@@ -74,15 +74,6 @@ pub fn main() -> Result<()> {
                 warp::terminal::local_tty::run_terminal_server(args);
                 return Ok(());
             }
-            #[cfg(feature = "warpeer")]
-            WorkerCommand::WarpeerPluginWorker {
-                plugin_id,
-                package_root,
-                execution_slice_ms,
-            } => {
-                warpeer_plugin_worker::run(plugin_id, package_root, *execution_slice_ms)?;
-                return Ok(());
-            }
             // This is a catch-all to handle the plugin host, which the integration test crate doesn't have a feature flag for.
             #[allow(unreachable_patterns)]
             other => panic!("Worker not supported in integration tests: {other:?}"),
@@ -450,16 +441,9 @@ fn register_tests() -> HashMap<&'static str, BoxedBuilderFn> {
     register_test!(test_settings_search_preserved_on_sidebar_click);
     register_test!(test_settings_agent_mcp_servers_renders_standalone_page);
     #[cfg(feature = "warpeer")]
-    register_test!(test_warpeer_plugins_settings_lifecycle);
-    #[cfg(feature = "warpeer")]
     register_test!(test_warpeer_tab_privacy_lock_unlock);
     #[cfg(feature = "warpeer")]
     register_test!(test_warpeer_settings_tab_cannot_be_locked);
-    #[cfg(feature = "warpeer")]
-    register_test!(test_warpeer_image_preview_end_to_end);
-    register_test!(test_warpeer_image_preview_from_ls_hover);
-    #[cfg(feature = "warpeer")]
-    register_test!(test_warpeer_image_preview_resource_plateau);
     #[cfg(feature = "warpeer")]
     register_test!(test_warpeer_worktree_agent_native_resume);
 

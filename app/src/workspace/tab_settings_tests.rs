@@ -127,24 +127,3 @@ fn header_toolbar_chip_selection_custom_empty_reports_all_absent() {
         assert!(!config.contains_item(&item));
     }
 }
-
-#[cfg(feature = "warpeer_plugins")]
-#[test]
-fn warpeer_default_toolbar_exposes_removable_plugin_diagnostics() {
-    let default = HeaderToolbarChipSelection::Default;
-    assert_eq!(
-        default.right_items().last(),
-        Some(&HeaderToolbarItemKind::PluginDiagnostics)
-    );
-    assert!(HeaderToolbarItemKind::all_items().contains(&HeaderToolbarItemKind::PluginDiagnostics));
-
-    let custom = HeaderToolbarChipSelection::Custom {
-        left: default.left_items(),
-        right: default
-            .right_items()
-            .into_iter()
-            .filter(|item| *item != HeaderToolbarItemKind::PluginDiagnostics)
-            .collect(),
-    };
-    assert!(!custom.contains_item(&HeaderToolbarItemKind::PluginDiagnostics));
-}

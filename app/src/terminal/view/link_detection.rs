@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use pathfinder_geometry::vector::Vector2F;
 use serde::{Serialize, Serializer};
 use warpui::ViewContext;
 use warpui::platform::Cursor;
@@ -369,11 +368,9 @@ impl Deref for HighlightedLinkOption {
 }
 
 impl super::TerminalView {
-    #[cfg_attr(not(feature = "warpeer_plugins"), allow(unused_variables))]
     pub(super) fn maybe_link_hover(
         &mut self,
         position: &Option<WithinModel<Point>>,
-        pointer: Option<Vector2F>,
         from_editor: TerminalEditor,
         ctx: &mut ViewContext<Self>,
     ) {
@@ -381,8 +378,6 @@ impl super::TerminalView {
         if self.terminal_is_selecting(&self.model.lock(), ctx)
             || self.is_navigated_away_from_window(ctx)
         {
-            #[cfg(feature = "warpeer_plugins")]
-            self.cancel_transient_plugin_hover(ctx);
             if self.highlighted_link.take(&mut self.model.lock()).is_some() {
                 ctx.reset_cursor();
                 ctx.notify();
@@ -392,8 +387,6 @@ impl super::TerminalView {
 
         // If the mouse isn't in the terminal view, we're not hovering any link.
         let Some(position) = position else {
-            #[cfg(feature = "warpeer_plugins")]
-            self.sync_plugin_hover(None, None, ctx);
             if self.highlighted_link.take(&mut self.model.lock()).is_some() {
                 ctx.reset_cursor();
                 // Clear last_hover_fragment_boundary when mouse is out of block bounds.
@@ -410,8 +403,6 @@ impl super::TerminalView {
             && !self.highlighted_link.is_invalidated()
         {
             // If already hovering on a highlighted link, return.
-            #[cfg(feature = "warpeer_plugins")]
-            self.sync_plugin_hover(Some(*position), pointer, ctx);
             return;
         }
 
@@ -490,9 +481,6 @@ impl super::TerminalView {
         }
 
         self.last_hover_fragment_boundary = Some(new_fragment_boundary);
-
-        #[cfg(feature = "warpeer_plugins")]
-        self.sync_plugin_hover(Some(*position), pointer, ctx);
     }
 
     #[cfg_attr(not(feature = "local_fs"), allow(unused_variables))]
@@ -821,13 +809,6 @@ impl super::TerminalView {
             ctx.notify();
         }
         drop(model);
-
-        #[cfg(feature = "warpeer_plugins")]
-        {
-            let position = self.plugin_hover.last_position();
-            let pointer = self.plugin_hover.last_pointer();
-            self.sync_plugin_hover(position, pointer, ctx);
-        }
     }
 }
 

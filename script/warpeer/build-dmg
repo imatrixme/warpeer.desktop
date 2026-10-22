@@ -221,7 +221,6 @@ default_jobs=$((logical_cpus > 0 ? logical_cpus : 1))
 export CARGO_BUILD_JOBS="${BUILD_JOBS:-$default_jobs}"
 
 "$repo_root/script/warpeer/sync-ghostty-themes" --check
-"$repo_root/script/warpeer/sync-pocketjs" --check
 
 IFS=$'\t' read -r version version_patch < <("$repo_root/script/warpeer/version" next)
 export GIT_RELEASE_TAG="$version"

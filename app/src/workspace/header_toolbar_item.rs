@@ -35,6 +35,7 @@ pub enum HeaderToolbarItemKind {
     TabPrivacy,
     CodeReview,
     NotificationsMailbox,
+    /// Retired. Kept so persisted toolbar layouts that include it still deserialize.
     PluginDiagnostics,
 }
 
@@ -94,7 +95,7 @@ impl HeaderToolbarItemKind {
             Self::TabPrivacy => crate::product_profile::is_terminal_only(),
             Self::CodeReview => cfg!(feature = "local_fs"),
             Self::NotificationsMailbox => FeatureFlag::HOANotifications.is_enabled(),
-            Self::PluginDiagnostics => cfg!(feature = "warpeer_plugins"),
+            Self::PluginDiagnostics => false,
         }
     }
 
@@ -127,21 +128,11 @@ impl HeaderToolbarItemKind {
             return vec![
                 Self::CodeReview,
                 Self::NotificationsMailbox,
-                #[cfg(feature = "warpeer_plugins")]
-                Self::PluginDiagnostics,
                 Self::PaneLayouts,
                 Self::TabPrivacy,
             ];
         }
-        #[cfg(all(feature = "warpeer_plugins", not(feature = "warpeer")))]
-        {
-            return vec![
-                Self::CodeReview,
-                Self::NotificationsMailbox,
-                Self::PluginDiagnostics,
-            ];
-        }
-        #[cfg(not(any(feature = "warpeer_plugins", feature = "warpeer")))]
+        #[cfg(not(feature = "warpeer"))]
         vec![Self::CodeReview, Self::NotificationsMailbox]
     }
 
@@ -157,22 +148,9 @@ impl HeaderToolbarItemKind {
                 Self::TabPrivacy,
                 Self::CodeReview,
                 Self::NotificationsMailbox,
-                #[cfg(feature = "warpeer_plugins")]
-                Self::PluginDiagnostics,
             ];
         }
-        #[cfg(all(feature = "warpeer_plugins", not(feature = "warpeer")))]
-        {
-            return vec![
-                Self::TabsPanel,
-                Self::ToolsPanel,
-                Self::AgentManagement,
-                Self::CodeReview,
-                Self::NotificationsMailbox,
-                Self::PluginDiagnostics,
-            ];
-        }
-        #[cfg(not(any(feature = "warpeer_plugins", feature = "warpeer")))]
+        #[cfg(not(feature = "warpeer"))]
         vec![
             Self::TabsPanel,
             Self::ToolsPanel,

@@ -1890,14 +1890,12 @@ impl BlockListElement {
             // Clear any link hover by dispatching with None position
             ctx.dispatch_typed_action(TerminalAction::MaybeLinkHover {
                 position: None,
-                pointer: None,
                 from_editor: TerminalEditor::No,
             });
         } else {
             // Dispatch normal link hover logic
             ctx.dispatch_typed_action(TerminalAction::MaybeLinkHover {
                 position: grid_point.map(WithinModel::BlockList),
-                pointer: Some(position),
                 from_editor: TerminalEditor::No,
             });
         }
@@ -1958,7 +1956,6 @@ impl BlockListElement {
                 ctx.dispatch_typed_action(TerminalAction::BlockHover(BlockHoverAction::Clear));
                 ctx.dispatch_typed_action(TerminalAction::MaybeLinkHover {
                     position: None,
-                    pointer: None,
                     from_editor: TerminalEditor::No,
                 });
 

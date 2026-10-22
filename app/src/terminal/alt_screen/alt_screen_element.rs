@@ -372,7 +372,6 @@ impl AltScreenElement {
 
         ctx.dispatch_typed_action(TerminalAction::MaybeLinkHover {
             position: Some(grid_point),
-            pointer: Some(local_position),
             from_editor,
         });
 
@@ -397,7 +396,6 @@ impl AltScreenElement {
     fn mouse_out(&self, ctx: &mut EventContext) -> bool {
         ctx.dispatch_typed_action(TerminalAction::MaybeLinkHover {
             position: None,
-            pointer: None,
             from_editor: TerminalEditor::No,
         });
         true

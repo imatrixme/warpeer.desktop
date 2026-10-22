@@ -30,11 +30,6 @@ log_named_telemetry_events = ["warpui_core/log_named_telemetry_events"]
 schema_gen = ["warpui_core/schema_gen"]
 settings_value = ["warpui_core/settings_value"]
 terminal_visuals = ["warpui_core/terminal_visuals"]
-external_surfaces = [
-    "warpui_core/external_surfaces",
-    "dep:objc2-io-surface",
-    "objc2-metal/objc2-io-surface",
-]
 # Enables utilities for testing.
 test-util = ["warpui_core/test-util"]
 experimental-wgpu-renderer = ["dep:wgpu", "dep:bytemuck", "dep:version-compare"]
@@ -112,7 +107,6 @@ objc2-app-kit = { workspace = true, features = [
 ] }
 objc2-av-foundation = { workspace = true, features = ["AVCaptureDevice", "AVMediaFormat"] }
 objc2-core-foundation.workspace = true
-objc2-io-surface = { workspace = true, optional = true }
 objc2-foundation = { workspace = true, features = [
     "NSArray",
     "NSData",

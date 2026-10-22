@@ -133,15 +133,24 @@ require_match '#[cfg_attr(feature = "warpeer", exclude = "async/**")]' \
   crates/warp_assets/src/lib.rs
 require_match 'ghostty-themes.json' app/src/themes/ghostty_themes.rs
 require_match 'sync-ghostty-themes" --check' script/warpeer/build-dmg
-require_match 'sync-pocketjs" --check' script/warpeer/build-dmg
-require_match 'warpeer_plugins = [' app/Cargo.toml
-require_match 'warpui/external_surfaces' app/Cargo.toml
-require_match '#[cfg(feature = "warpeer_plugins")]' app/src/settings_view/mod.rs
-require_match 'mod container_host;' app/src/warpeer_plugin/mod.rs
-require_match 'mod container_transition_visual;' app/src/warpeer_plugin/mod.rs
-require_match 'mod legacy_container_adapter;' app/src/warpeer_plugin/mod.rs
-require_match 'export class ContainerController' plugins/sdk/container.ts
-require_match 'container.open(' plugins/image-preview/src/app.tsx
+for removed_plugin_path in \
+  app/src/warpeer_plugin \
+  crates/pocketjs_adapter \
+  crates/warpeer_plugin_protocol \
+  crates/warpeer_plugin_runtime \
+  crates/warpeer_plugin_surface_transport \
+  crates/warpeer_plugin_worker \
+  plugins \
+  third_party/pocketjs
+do
+  if [[ -e "$removed_plugin_path" ]]; then
+    fail "Warpeer does not ship a plugin system: $removed_plugin_path"
+  fi
+done
+if rg --quiet 'warpeer_plugins|external_surfaces|pocketjs' Cargo.toml app/Cargo.toml \
+  crates/warpui/Cargo.toml crates/warpui_core/Cargo.toml; then
+  fail 'Warpeer plugin features must not return to the workspace manifests'
+fi
 
 for bounded_container_source in \
   app/src/ai/agent_events_disabled.rs \
@@ -163,15 +172,8 @@ for bounded_container_source in \
   app/src/settings_view/knowledge_page_disabled.rs \
   app/src/settings_view/mcp_servers_page_disabled.rs \
   app/src/settings_view/warp_agent_page_disabled.rs \
-  app/src/terminal/view/plugin_hover.rs \
-  app/src/terminal/view/plugin_container_menu.rs \
-  app/src/terminal/view/plugin_container_presentation.rs \
   app/src/context_chips/display_chip/worktree.rs \
   app/src/context_chips/git_worktree_porcelain.rs \
-  app/src/warpeer_plugin/container_host.rs \
-  app/src/warpeer_plugin/container_transition_visual.rs \
-  app/src/warpeer_plugin/legacy_container_adapter.rs \
-  app/src/warpeer_plugin/surface_element_host.rs \
   app/src/worktree_agents/catalog.rs \
   app/src/worktree_agents/catalog_dirty.rs \
   app/src/worktree_agents/coordinator.rs \
@@ -202,17 +204,7 @@ for bounded_container_source in \
   app/src/worktree_agents/ui/overview.rs \
   app/src/worktree_agents/ui/status.rs \
   crates/integration/src/test/worktree_agents.rs \
-  crates/editor/src/content/mermaid_diagram_disabled.rs \
-  crates/warpeer_plugin_protocol/src/container.rs \
-  crates/warpeer_plugin_runtime/src/container_budget.rs \
-  crates/warpeer_plugin_runtime/src/container_ledger.rs \
-  crates/warpeer_plugin_runtime/src/container_reducer.rs \
-  crates/warpeer_plugin_runtime/src/container_store.rs \
-  crates/warpeer_plugin_runtime/src/container_store_resources.rs \
-  crates/warpeer_plugin_runtime/src/extension_negotiation.rs \
-  plugins/sdk/container.ts \
-  plugins/image-preview/src/app.tsx \
-  plugins/image-preview/src/presentation.ts
+  crates/editor/src/content/mermaid_diagram_disabled.rs
 do
   require_max_lines 500 "$bounded_container_source"
 done
@@ -241,7 +233,6 @@ do
 done
 
 script/warpeer/sync-ghostty-themes --check
-script/warpeer/sync-pocketjs --check
 
 if rg --quiet 'WARPEER_NOTARY_PROFILE|notarytool store-credentials' \
   script/warpeer; then
@@ -269,10 +260,21 @@ release_profile="$(awk '
   /^\[/ { capture = 0 }
   capture
 ' Cargo.toml)"
-if grep -Eq 'panic[[:space:]]*=[[:space:]]*"abort"|opt-level[[:space:]]*=[[:space:]]*"[sz]"' \
+if grep -Eq 'panic[[:space:]]*=[[:space:]]*"abort"|opt-level[[:space:]]*=[[:space:]]*("z"|[012])' \
   <<<"$release_profile"; then
-  fail 'release-warpeer must preserve unwind semantics and release optimization'
+  fail 'release-warpeer must preserve unwind semantics and use opt-level 3 or "s"'
 fi
+# Size optimization is allowed only while the terminal, rendering, font, and allocator hot paths
+# keep full optimization.
+release_package_profile="$(awk '
+  /^\[profile\.release-warpeer\.package\]$/ { capture = 1; next }
+  /^\[/ { capture = 0 }
+  capture
+' Cargo.toml)"
+for hot_crate in warp_terminal warpui_core warpui vte tikv-jemalloc-sys ttf-parser memchr; do
+  grep -Eq "^${hot_crate}\.opt-level[[:space:]]*=[[:space:]]*3\$" <<<"$release_package_profile" ||
+    fail "release-warpeer must keep $hot_crate at opt-level 3"
+done
 
 dependency_tree="$(mktemp)"
 full_dependency_tree="$(mktemp)"
@@ -282,19 +284,14 @@ trap 'rm -f -- "$dependency_tree" "$full_dependency_tree" "$warpeer_feature_tree
   "$full_feature_tree"' EXIT
 cargo tree -p warp --no-default-features --features warpeer -e normal --prefix none \
   > "$dependency_tree"
-for required_dependency in \
+for forbidden_dependency in \
+  app-installation-detection \
   pocketjs_adapter \
+  rquickjs \
   warpeer_plugin_protocol \
   warpeer_plugin_runtime \
   warpeer_plugin_surface_transport \
-  warpeer_plugin_worker
-do
-  if ! grep -Eq "^${required_dependency}( |$)" "$dependency_tree"; then
-    fail "required plugin dependency is missing from the Warpeer closure: $required_dependency"
-  fi
-done
-for forbidden_dependency in \
-  app-installation-detection \
+  warpeer_plugin_worker \
   aws-config \
   aws-credential-types \
   aws-sdk-signin \
@@ -371,17 +368,6 @@ do
     fail "full Warp dependency is missing: $required_full_dependency"
   fi
 done
-for warpeer_only_dependency in \
-  pocketjs_adapter \
-  warpeer_plugin_protocol \
-  warpeer_plugin_runtime \
-  warpeer_plugin_surface_transport \
-  warpeer_plugin_worker
-do
-  if grep -Eq "^${warpeer_only_dependency}( |$)" "$full_dependency_tree"; then
-    fail "Warpeer-only plugin dependency leaked into full Warp: $warpeer_only_dependency"
-  fi
-done
 
 cargo tree -p warp --no-default-features --features warpeer -e features \
   -i warp-command-signatures --prefix none > "$warpeer_feature_tree"
@@ -421,16 +407,6 @@ cargo check -p warp_completer --features embedded-signatures
 cargo test -p warp_editor --no-default-features \
   test_mermaid_code_block_type_respects_feature_flag
 cargo test -p warp_editor test_mermaid_code_block_type_respects_feature_flag
-cargo test -p warpeer_plugin_protocol
-cargo test -p warpeer_plugin_runtime
-cargo test -p warpeer_plugin_surface_transport
-cargo test -p pocketjs_adapter
-cargo test -p warpeer_plugin_worker
-cargo test -p warp --lib --no-default-features --features warpeer warpeer_plugin::
-cargo test -p warp --lib --no-default-features --features warpeer \
-  terminal::view::plugin_hover::tests::terminal_snapshot_lock_is_released_before_dispatch_scope
-cargo test -p warp plugin_settings_availability --lib --no-default-features --features warpeer
-cargo test -p warp plugin_settings_availability --lib --features gui
 cargo test -p warp product_profile --lib --features gui
 cargo test -p warp ghostty_theme --lib --features gui,warpeer_assets
 cargo test -p warp_assets --features warpeer

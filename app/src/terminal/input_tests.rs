@@ -783,17 +783,13 @@ fn test_input_tab() {
     });
 }
 
-#[cfg(all(feature = "terminal_visuals", feature = "warpeer_plugins"))]
+#[cfg(feature = "terminal_visuals")]
 #[test]
 fn backspace_on_empty_input_does_not_emit_backspace_performed() {
     App::test((), |mut app| async move {
         initialize_app(&mut app);
         app.update(|ctx| {
             crate::settings::TerminalVisualSettings::register(ctx);
-            ctx.add_singleton_model(|ctx| {
-                crate::warpeer_plugin::WarpeerPluginHost::new(ctx)
-                    .expect("initialize Warpeer plugin host for terminal test")
-            });
         });
         let terminal = add_window_with_bootstrapped_terminal(&mut app, None, None).await;
         let input = terminal.read(&app, |terminal, _| terminal.input().clone());

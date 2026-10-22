@@ -4,7 +4,6 @@ app/frameworks/dev/Carthage
 app/frameworks/**/*.xcframework
 /target
 /app/target
-/third_party/pocketjs/engine/target
 /build/
 
 # Keep local Apple signing and App Store Connect credentials out of Git.

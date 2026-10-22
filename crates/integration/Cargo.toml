@@ -48,9 +48,6 @@ warpui_core.workspace = true
 warpui_extras = { workspace = true, features = [
     "user_preferences-file",
 ] }
-warpeer_plugin_worker = { workspace = true, optional = true }
-warpeer_plugin_protocol = { workspace = true, optional = true }
-warpeer_plugin_runtime = { workspace = true, optional = true }
 whoami = "1.5.2"
 
 [dev-dependencies]
@@ -71,10 +68,5 @@ run_on_linux = []
 drag_tabs_to_windows = ["warp/drag_tabs_to_windows"]
 full_warp = ["warp/default"]
 terminal_only_profile = []
-warpeer = [
-    "warp/warpeer",
-    "dep:warpeer_plugin_protocol",
-    "dep:warpeer_plugin_runtime",
-    "dep:warpeer_plugin_worker",
-]
+warpeer = ["warp/warpeer"]
 default = ["run_on_linux", "full_warp"]

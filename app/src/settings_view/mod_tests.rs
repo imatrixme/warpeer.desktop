@@ -131,7 +131,6 @@ const ALL_SECTIONS: &[SettingsSection] = &[
     SettingsSection::BillingAndUsage,
     SettingsSection::Appearance,
     SettingsSection::TerminalEffects,
-    SettingsSection::Plugins,
     SettingsSection::Features,
     SettingsSection::Keybindings,
     SettingsSection::Security,
@@ -160,14 +159,6 @@ const SECTIONS_WITH_RENAMED_DISPLAY_LABELS: &[SettingsSection] =
     &[SettingsSection::WarpCloudAgentAPIKeys];
 
 #[test]
-fn plugin_settings_availability_matches_product_feature() {
-    assert_eq!(
-        SettingsSection::Plugins.is_available(),
-        cfg!(feature = "warpeer_plugins")
-    );
-}
-
-#[test]
 fn security_settings_availability_matches_warpeer_product() {
     assert_eq!(
         SettingsSection::Security.is_available(),
@@ -184,7 +175,6 @@ fn all_sections_list_is_exhaustive() {
             | SettingsSection::BillingAndUsage
             | SettingsSection::Appearance
             | SettingsSection::TerminalEffects
-            | SettingsSection::Plugins
             | SettingsSection::Features
             | SettingsSection::Keybindings
             | SettingsSection::Security

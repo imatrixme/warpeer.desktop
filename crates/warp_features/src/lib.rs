@@ -1,6 +1,8 @@
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 use enum_iterator::{Sequence, cardinality};
+
+mod terminal_only;
 #[cfg(feature = "test-util")]
 pub use overrides::{get_overrides, set_overrides};
 
@@ -1089,6 +1091,13 @@ pub const RUNTIME_FEATURE_FLAGS: &[FeatureFlag] = &[FeatureFlag::LocalClaudeCode
 
 impl FeatureFlag {
     pub fn is_enabled(&self) -> bool {
+        // Compile-time rejection lets the optimizer drop code gated on flags the terminal-only
+        // product can never enable.
+        #[cfg(feature = "terminal_only")]
+        if !self.allowed_in_terminal_only() {
+            return false;
+        }
+
         #[cfg(all(debug_assertions, not(feature = "test-util")))]
         {
             use std::sync::atomic::Ordering;

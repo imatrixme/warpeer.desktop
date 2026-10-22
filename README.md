@@ -12,7 +12,6 @@ and removes accounts, cloud sync, hosted AI, and other hosted-service features.
 - Bundled Ghostty color themes and configurable terminal motion effects
 - Tab privacy with biometric unlock and pane previews
 - Worktree agent control center for local CLI agents
-- Sandboxed plugin surfaces (PocketJS)
 
 Warpeer never sends telemetry or crash reports, does not auto-update, does not run a local HTTP
 server, and does not require sign-in. It stores its data in its own `.warpeer` and application

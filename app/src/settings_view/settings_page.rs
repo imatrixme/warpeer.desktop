@@ -42,8 +42,6 @@ use super::keybindings::KeybindingsView;
 use super::knowledge_page::KnowledgePageView;
 use super::main_page::MainSettingsPageView;
 use super::mcp_servers_page::MCPServersSettingsPageView;
-#[cfg(feature = "warpeer_plugins")]
-use super::plugins_page::PluginsSettingsPageView;
 use super::privacy_page::PrivacyPageView;
 use super::referrals_page::ReferralsPageView;
 use super::scripting_page::ScriptingSettingsPageView;
@@ -118,8 +116,6 @@ pub enum SettingsPageViewHandle {
     Appearance(ViewHandle<AppearanceSettingsPageView>),
     #[cfg(feature = "terminal_visuals")]
     TerminalVisuals(ViewHandle<TerminalVisualsSettingsPageView>),
-    #[cfg(feature = "warpeer_plugins")]
-    Plugins(ViewHandle<PluginsSettingsPageView>),
     Features(ViewHandle<FeaturesPageView>),
     SharedBlocks(ViewHandle<ShowBlocksView>),
     Keybindings(ViewHandle<KeybindingsView>),
@@ -152,8 +148,6 @@ impl SettingsPageViewHandle {
             Appearance(view_handle) => ChildView::new(view_handle).finish(),
             #[cfg(feature = "terminal_visuals")]
             TerminalVisuals(view_handle) => ChildView::new(view_handle).finish(),
-            #[cfg(feature = "warpeer_plugins")]
-            Plugins(view_handle) => ChildView::new(view_handle).finish(),
             Features(view_handle) => ChildView::new(view_handle).finish(),
             SharedBlocks(view_handle) => ChildView::new(view_handle).finish(),
             Keybindings(view_handle) => ChildView::new(view_handle).finish(),

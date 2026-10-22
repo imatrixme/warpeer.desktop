@@ -108,11 +108,6 @@ warpui_core = { path = "crates/warpui_core" }
 warpui_extras = { path = "crates/warpui_extras", default-features = false }
 watcher = { path = "crates/watcher" }
 websocket = { path = "crates/websocket", default-features = false }
-warpeer_plugin_protocol = { path = "crates/warpeer_plugin_protocol" }
-warpeer_plugin_runtime = { path = "crates/warpeer_plugin_runtime" }
-pocketjs_adapter = { path = "crates/pocketjs_adapter" }
-warpeer_plugin_worker = { path = "crates/warpeer_plugin_worker" }
-warpeer_plugin_surface_transport = { path = "crates/warpeer_plugin_surface_transport" }
 
 # Workspace-level dependencies used by multiple crates. Prefer adding dependencies
 # here to copying-and-pasting versions.
@@ -235,7 +230,6 @@ objc2 = "0.6.3"
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["NSScreen", "objc2-core-foundation"] }
 objc2-av-foundation = { version = "0.3.2", default-features = false }
 objc2-core-foundation = "0.3.2"
-objc2-io-surface = "0.3.2"
 objc2-local-authentication = { version = "0.3.2", default-features = false, features = [
   "LAContext",
   "LAError",
@@ -475,8 +469,21 @@ inherits = "release-lto"
 debug = 0
 split-debuginfo = "off"
 strip = "debuginfo"
-lto = "thin"
-codegen-units = 4
+# Fat LTO with a single codegen unit and size-optimized code cut the stripped binary by over a
+# third; the crates below stay at opt-level 3 because they carry terminal parsing, rendering,
+# font, and allocator hot paths.
+lto = "fat"
+codegen-units = 1
+opt-level = "s"
+
+[profile.release-warpeer.package]
+warp_terminal.opt-level = 3
+warpui_core.opt-level = 3
+warpui.opt-level = 3
+vte.opt-level = 3
+tikv-jemalloc-sys.opt-level = 3
+ttf-parser.opt-level = 3
+memchr.opt-level = 3
 
 # A shorthand profile for `release-lto`.
 # Windows enforces that any path is a maximum of 255 characters and

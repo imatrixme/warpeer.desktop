@@ -17,10 +17,6 @@ use main_page::{MainPageAction, MainSettingsPageEvent, MainSettingsPageView};
 use mcp_servers_page::MCPServersSettingsPageView;
 use nav::{SettingsNavItem, SettingsUmbrella};
 use pathfinder_geometry::vector::Vector2F;
-#[cfg(all(feature = "warpeer_plugins", feature = "integration_tests"))]
-pub(crate) use plugins_page::PluginsPageAction;
-#[cfg(feature = "warpeer_plugins")]
-pub(crate) use plugins_page::PluginsSettingsPageView;
 use privacy_page::{PrivacyPageView, PrivacyPageViewEvent};
 use referrals_page::{ReferralsPageEvent, ReferralsPageView};
 use scripting_page::ScriptingSettingsPageView;
@@ -144,20 +140,6 @@ mod nav;
 pub mod pane_manager;
 mod platform;
 mod platform_page;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_controls;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_custom_surface;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_detail_controls;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_lifecycle_controls;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_page;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_setting_controls;
-#[cfg(feature = "warpeer_plugins")]
-mod plugins_split_layout;
 mod privacy;
 mod privacy_page;
 mod referrals_page;
@@ -198,12 +180,6 @@ pub use cli_agents_page::cli_agent_settings_widget_id;
 pub use code_indexing_page::CodeIndexingPageView;
 pub use features_page::FeaturesPageAction;
 pub use main_page::handle_experiment_change;
-#[cfg(all(feature = "warpeer_plugins", feature = "integration_tests"))]
-pub(crate) use plugins_controls::{empty_plugin_widget_id, plugin_inventory_widget_id};
-#[cfg(all(feature = "warpeer_plugins", feature = "integration_tests"))]
-pub(crate) use plugins_detail_controls::{plugin_detail_widget_id, plugin_diagnostics_widget_id};
-#[cfg(all(feature = "warpeer_plugins", feature = "integration_tests"))]
-pub(crate) use plugins_split_layout::{plugin_detail_position_id, plugin_list_position_id};
 pub use privacy_page::PrivacyPageAction;
 pub use settings_page::{
     AdditionalInfo, InputListItem, LocalOnlyIconState, ToggleState, render_body_item_label,
@@ -387,7 +363,6 @@ pub enum SettingsSection {
     BillingAndUsage,
     Appearance,
     TerminalEffects,
-    Plugins,
     Features,
     Keybindings,
     Security,
@@ -421,7 +396,6 @@ impl Display for SettingsSection {
         match self {
             SettingsSection::BillingAndUsage => write!(f, "Billing and usage"),
             SettingsSection::TerminalEffects => write!(f, "Terminal effects"),
-            SettingsSection::Plugins => write!(f, "Plugins"),
             SettingsSection::Keybindings => write!(f, "Keyboard shortcuts"),
             SettingsSection::SharedBlocks => write!(f, "Shared blocks"),
             SettingsSection::Scripting => write!(f, "Scripting"),
@@ -442,9 +416,6 @@ impl Display for SettingsSection {
 
 impl SettingsSection {
     fn is_available(self) -> bool {
-        if self == Self::Plugins {
-            return cfg!(feature = "warpeer_plugins");
-        }
         if self == Self::Security {
             return cfg!(feature = "warpeer");
         }
@@ -456,7 +427,6 @@ impl SettingsSection {
             self,
             Self::Appearance
                 | Self::TerminalEffects
-                | Self::Plugins
                 | Self::EditorAndCodeReview
                 | Self::Features
                 | Self::Keybindings
@@ -485,7 +455,6 @@ impl SettingsSection {
             Self::BillingAndUsage => "Billing and usage",
             Self::Appearance => "Appearance",
             Self::TerminalEffects => "Terminal effects",
-            Self::Plugins => "Plugins",
             Self::Features => "Features",
             Self::Keybindings => "Keyboard shortcuts",
             Self::Security => "Security",
@@ -524,7 +493,6 @@ impl SettingsSection {
             "Billing and usage" => Self::BillingAndUsage,
             "Appearance" => Self::Appearance,
             "Terminal effects" => Self::TerminalEffects,
-            "Plugins" => Self::Plugins,
             "Features" => Self::Features,
             "Keyboard shortcuts" => Self::Keybindings,
             "Security" => Self::Security,
@@ -1283,8 +1251,6 @@ macro_rules! update_page {
             SettingsPageViewHandle::Appearance(handle) => $ctx.update_view(handle, $update),
             #[cfg(feature = "terminal_visuals")]
             SettingsPageViewHandle::TerminalVisuals(handle) => $ctx.update_view(handle, $update),
-            #[cfg(feature = "warpeer_plugins")]
-            SettingsPageViewHandle::Plugins(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Features(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::SharedBlocks(handle) => $ctx.update_view(handle, $update),
             SettingsPageViewHandle::Keybindings(handle) => $ctx.update_view(handle, $update),
@@ -1362,9 +1328,6 @@ impl SettingsView {
         #[cfg(feature = "terminal_visuals")]
         let terminal_visuals_page_handle =
             ctx.add_typed_action_view(TerminalVisualsSettingsPageView::new);
-
-        #[cfg(feature = "warpeer_plugins")]
-        let plugins_page_handle = ctx.add_typed_action_view(PluginsSettingsPageView::new);
 
         // Features page
         let features_page_handle = ctx.add_typed_action_view(|ctx| {
@@ -1539,8 +1502,6 @@ impl SettingsView {
             SettingsPage::new(appearance_page_handle),
             #[cfg(feature = "terminal_visuals")]
             SettingsPage::new(terminal_visuals_page_handle),
-            #[cfg(feature = "warpeer_plugins")]
-            SettingsPage::new(plugins_page_handle),
             SettingsPage::new(features_page_handle),
             SettingsPage::new(keybindings_handle),
             #[cfg(feature = "warpeer")]
@@ -1598,8 +1559,6 @@ impl SettingsView {
             SettingsNavItem::Page(SettingsSection::Appearance),
             #[cfg(feature = "terminal_visuals")]
             SettingsNavItem::Page(SettingsSection::TerminalEffects),
-            #[cfg(feature = "warpeer_plugins")]
-            SettingsNavItem::Page(SettingsSection::Plugins),
             SettingsNavItem::Page(SettingsSection::Features),
             SettingsNavItem::Page(SettingsSection::Keybindings),
             #[cfg(feature = "warpeer")]
@@ -2297,8 +2256,6 @@ impl SettingsView {
             SettingsPageViewHandle::Appearance(v) => v.as_ref(app).should_render(app),
             #[cfg(feature = "terminal_visuals")]
             SettingsPageViewHandle::TerminalVisuals(v) => v.as_ref(app).should_render(app),
-            #[cfg(feature = "warpeer_plugins")]
-            SettingsPageViewHandle::Plugins(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::BillingAndUsage(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::About(v) => v.as_ref(app).should_render(app),
             SettingsPageViewHandle::WarpCloudAgentAPIKeys(v) => v.as_ref(app).should_render(app),
