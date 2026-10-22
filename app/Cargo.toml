@@ -823,6 +823,7 @@ terminal_visuals = ["warpui/terminal_visuals", "warpui_core/terminal_visuals"]
 warpeer = [
     "dep:block2",
     "warp_core/terminal_only",
+    "warpui/no_telemetry",
     "dep:objc2-local-authentication",
     "dep:pbkdf2",
     "dep:subtle",

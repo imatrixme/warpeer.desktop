@@ -13,6 +13,8 @@ lazy_static! {
     static ref TELEMETRY: Mutex<EventStore> = Mutex::new(EventStore::new());
 }
 
+const TELEMETRY_DISABLED: bool = cfg!(feature = "no_telemetry");
+
 #[macro_export]
 macro_rules! record_telemetry_from_ctx {
     ($user_id: expr, $anonymous_id: expr, $name:expr, $payload: expr, $contains_ugc: expr, $ctx: expr) => {{
@@ -80,6 +82,9 @@ pub fn record_event(
     contains_ugc: bool,
     timestamp: DateTime<Utc>,
 ) {
+    if TELEMETRY_DISABLED {
+        return;
+    }
     let mut telemetry = TELEMETRY.lock();
     telemetry.record_event(
         user_id,
@@ -92,6 +97,9 @@ pub fn record_event(
 }
 
 pub fn record_identify_user_event(user_id: String, anonymous_id: String, timestamp: DateTime<Utc>) {
+    if TELEMETRY_DISABLED {
+        return;
+    }
     let mut telemetry = TELEMETRY.lock();
     telemetry.record_identify_user_event(user_id, anonymous_id, timestamp);
 }
@@ -103,6 +111,9 @@ pub fn record_app_active_event(
     anonymous_id: String,
     timestamp: DateTime<Utc>,
 ) {
+    if TELEMETRY_DISABLED {
+        return;
+    }
     let mut telemetry = TELEMETRY.lock();
     telemetry.record_app_active(user_id, anonymous_id, timestamp);
 }
@@ -110,3 +121,7 @@ pub fn record_app_active_event(
 pub fn flush_events() -> Vec<Event> {
     TELEMETRY.lock().events.drain(..).collect()
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;

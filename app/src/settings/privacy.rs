@@ -196,6 +196,10 @@ impl PrivacySettingsSnapshot {
     }
 
     pub fn should_disable_telemetry(&self) -> bool {
+        // Warpeer never sends telemetry, whatever the persisted privacy settings say.
+        if cfg!(feature = "warpeer") {
+            return true;
+        }
         // If a user has opted in to the agent mode analytics experiment, telemetry must be enabled.
         !self.is_telemetry_enabled
             && !self.is_telemetry_force_enabled

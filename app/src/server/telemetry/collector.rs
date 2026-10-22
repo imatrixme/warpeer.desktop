@@ -13,6 +13,7 @@ use super::{RUDDER_TELEMETRY_EVENTS_FILE_NAME, clear_event_queue, rudder_event_f
 use crate::auth::AuthStateProvider;
 use crate::channel::ChannelState;
 use crate::features::FeatureFlag;
+use crate::product_profile;
 use crate::server::server_api::ServerApi;
 use crate::settings::{PrivacySettings, PrivacySettingsChangedEvent};
 
@@ -99,6 +100,10 @@ impl TelemetryCollector {
     /// * Write events to disk, for sending on the next app startup
     /// * Synchronously send events to rudderstack
     pub fn flush_telemetry_events_for_shutdown(&self, ctx: &mut ModelContext<TelemetryCollector>) {
+        if !product_profile::allows_hosted_services() {
+            clear_event_queue();
+            return;
+        }
         let execution_mode = AppExecutionMode::as_ref(ctx);
 
         if execution_mode.send_telemetry_at_shutdown() {
@@ -164,6 +169,21 @@ impl TelemetryCollector {
             },
             |_, _, _| (),
         );
+    }
+
+    /// Deletes telemetry events that earlier builds persisted to disk, without sending them.
+    pub fn discard_persisted_events(&self) {
+        let paths = [
+            rudder_event_file_path(),
+            warp_core::paths::state_dir().join(RUDDER_TELEMETRY_EVENTS_FILE_NAME),
+        ];
+        for path in paths {
+            if let Err(e) = remove_file(&path)
+                && e.kind() != std::io::ErrorKind::NotFound
+            {
+                log::warn!("Failed to remove persisted telemetry events: {e}");
+            }
+        }
     }
 
     /// Schedules a background task to send an active usage event in a rudderstack request if

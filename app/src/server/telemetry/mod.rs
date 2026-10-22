@@ -383,6 +383,10 @@ impl TelemetryApi {
         mut msg: RudderMessage,
         rudder_stack_destination: RudderStackDestination,
     ) -> Result<()> {
+        // Last line of defense: no Warpeer code path may reach the RudderStack endpoint.
+        if cfg!(feature = "warpeer") {
+            return Ok(());
+        }
         msg.attach_context();
 
         let path = match msg {

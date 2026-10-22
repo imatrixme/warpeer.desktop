@@ -2120,7 +2120,9 @@ pub(crate) fn initialize_app(
     let server_api_clone = server_api.clone();
     ctx.add_singleton_model(|ctx| {
         let telemetry_collector = TelemetryCollector::new(server_api_clone);
-        if !product_profile::is_terminal_only() {
+        if product_profile::is_terminal_only() {
+            telemetry_collector.discard_persisted_events();
+        } else {
             telemetry_collector.initialize_telemetry_collection(ctx);
         }
         telemetry_collector

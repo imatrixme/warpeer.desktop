@@ -17,6 +17,8 @@ defer_scene_build = []
 # If enabled, writes named telemetry events to the info log.  Should never be
 # enabled in release builds without a PII audit of telemetry data.
 log_named_telemetry_events = []
+# Drops every telemetry event at the source so nothing can be queued, persisted, or sent.
+no_telemetry = []
 schema_gen = ["dep:schemars"]
 settings_value = ["dep:settings_value"]
 terminal_visuals = []

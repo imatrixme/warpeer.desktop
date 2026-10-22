@@ -38,7 +38,6 @@ use crate::context_chips::ContextChipKind;
 use crate::context_chips::prompt::Prompt;
 use crate::features::FeatureFlag;
 use crate::persistence::ModelEvent;
-use crate::send_telemetry_on_executor;
 use crate::server::telemetry::{PtySpawnMode as TelemetryPtySpawnMode, TelemetryEvent};
 use crate::settings::{DebugSettings, PrivacySettings, SshSettings};
 use crate::terminal::available_shells::{AvailableShell, AvailableShells};
@@ -69,6 +68,7 @@ use crate::terminal::{
     PTY_READS_BROADCAST_CHANNEL_SIZE, ShellLaunchData, ShellLaunchState, SizeInfo,
     TerminalManager as TerminalManagerTrait, TerminalModel, terminal_manager,
 };
+use crate::{product_profile, send_telemetry_on_executor};
 
 type PtyController = writeable_pty::PtyController<mio_channel::Sender<Message>>;
 type RemoteServerController =
@@ -847,9 +847,10 @@ impl<S> TerminalManager<S> {
         // wrapper is active. The bootstrap scripts check `WARP_USE_SSH_WRAPPER` (derived
         // from this value) before invoking `warp_ssh_helper`, which spawns the ControlMaster
         // and opens agent-protocol channels.
-        let enable_ssh_wrapper = *WarpifySettings::as_ref(ctx)
-            .enable_ssh_warpification
-            .value();
+        let enable_ssh_wrapper = product_profile::allows_ssh_wrapper()
+            && *WarpifySettings::as_ref(ctx)
+                .enable_ssh_warpification
+                .value();
 
         // Only meaningful when the legacy ControlMaster wrapper is active.
         let reuse_ssh_control_master = enable_ssh_wrapper

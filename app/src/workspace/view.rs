@@ -23208,7 +23208,9 @@ impl Workspace {
                 .set
                 .insert(flags::SSH_REUSE_CONTROL_MASTER_CONTEXT_FLAG);
         }
-        if *warpify_settings.enable_ssh_warpification.value() {
+        if product_profile::allows_ssh_wrapper()
+            && *warpify_settings.enable_ssh_warpification.value()
+        {
             context.set.insert(flags::SSH_WARPIFICATION_CONTEXT_FLAG);
         }
 

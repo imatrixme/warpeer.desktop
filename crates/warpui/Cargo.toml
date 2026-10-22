@@ -27,6 +27,7 @@ defer_scene_build = ["warpui_core/defer_scene_build"]
 # If enabled, writes named telemetry events to the info log.  Should never be
 # enabled in release builds without a PII audit of telemetry data.
 log_named_telemetry_events = ["warpui_core/log_named_telemetry_events"]
+no_telemetry = ["warpui_core/no_telemetry"]
 schema_gen = ["warpui_core/schema_gen"]
 settings_value = ["warpui_core/settings_value"]
 terminal_visuals = ["warpui_core/terminal_visuals"]

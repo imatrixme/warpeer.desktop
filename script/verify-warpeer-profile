@@ -84,6 +84,25 @@ require_match 'warp_search_core = { path = "crates/warp_search_core", default-fe
 require_match 'warp_server_client = { path = "crates/warp_server_client", default-features = false }' Cargo.toml
 require_match 'websocket = { path = "crates/websocket", default-features = false }' Cargo.toml
 require_match 'warp_core::telemetry::disable_telemetry();' app/src/lib.rs
+# Telemetry must be stopped at every layer: no event queued, no privacy opt-in honored, nothing
+# persisted for a later launch, and no request reaching RudderStack.
+require_match '"warpui/no_telemetry"' app/Cargo.toml
+# The ControlMaster SSH wrapper multiplexes background commands over the user's connection.
+require_regex 'let enable_ssh_wrapper = product_profile::allows_ssh_wrapper\(\)\n\s*&& ' \
+  app/src/terminal/local_tty/terminal_manager.rs
+require_match 'const TELEMETRY_DISABLED: bool = cfg!(feature = "no_telemetry");' \
+  crates/warpui_core/src/telemetry/mod.rs
+[[ "$(rg --count-matches --fixed-strings 'if TELEMETRY_DISABLED {' \
+  crates/warpui_core/src/telemetry/mod.rs)" == 3 ]] ||
+  fail 'every warpui_core telemetry recorder must return early when telemetry is disabled'
+require_regex 'fn should_disable_telemetry\(&self\) -> bool \{\n[^\n]*\n\s*if cfg!\(feature = "warpeer"\) \{\n\s*return true;' \
+  app/src/settings/privacy.rs
+require_regex 'async fn send_rudder_request\([^)]*\) -> Result<\(\)> \{\n[^\n]*\n\s*if cfg!\(feature = "warpeer"\) \{\n\s*return Ok\(\(\)\);' \
+  app/src/server/telemetry/mod.rs
+require_regex 'fn flush_telemetry_events_for_shutdown\([^)]*\) \{\n\s*if !product_profile::allows_hosted_services\(\) \{\n\s*clear_event_queue\(\);\n\s*return;' \
+  app/src/server/telemetry/collector.rs
+require_regex 'if product_profile::is_terminal_only\(\) \{\n\s*telemetry_collector\.discard_persisted_events\(\);' \
+  app/src/lib.rs
 require_match 'AuthState::initialize_logged_out()' app/src/lib.rs
 require_regex '#\[cfg\(feature = "warpeer"\)\]\nmod worktree_agents;' app/src/lib.rs
 require_regex '#\[cfg\(feature = "warpeer"\)\]\n    worktree_agents::init\(ctx\);' app/src/lib.rs
@@ -408,6 +427,8 @@ cargo test -p warp_editor --no-default-features \
   test_mermaid_code_block_type_respects_feature_flag
 cargo test -p warp_editor test_mermaid_code_block_type_respects_feature_flag
 cargo test -p warp product_profile --lib --features gui
+cargo test -p warpui_core --features no_telemetry telemetry::tests
+cargo test -p warpui_core telemetry::tests
 cargo test -p warp ghostty_theme --lib --features gui,warpeer_assets
 cargo test -p warp_assets --features warpeer
 cargo test -p languages --no-default-features --features warpeer-core

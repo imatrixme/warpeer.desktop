@@ -45,6 +45,12 @@ impl ProductProfile {
         self.is_full_warp()
     }
 
+    /// Whether interactive `ssh` runs through Warp's ControlMaster wrapper, which multiplexes
+    /// background commands over the user's connection and can exhaust the server's `MaxSessions`.
+    pub(crate) fn allows_ssh_wrapper(self) -> bool {
+        self.is_full_warp()
+    }
+
     #[cfg(any(feature = "warpeer", test))]
     pub(crate) fn allows_worktree_agent_control_center(self) -> bool {
         self == Self::TerminalOnly
@@ -123,6 +129,10 @@ pub(crate) fn allows_theme_background_images() -> bool {
 
 pub(crate) fn allows_focus_panes_on_hover() -> bool {
     active().allows_focus_panes_on_hover()
+}
+
+pub(crate) fn allows_ssh_wrapper() -> bool {
+    active().allows_ssh_wrapper()
 }
 
 #[cfg(feature = "warpeer")]
