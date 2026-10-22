@@ -1,0 +1,28 @@
+# pocket-apple — the PocketJS Apple host core: one pocket-mod guest realm,
+# the pocket-ui-surface `ui` mount, and pocketjs-core's software rasterizer
+# behind a small C ABI consumed by PocketSurfaceView (UIKit).
+
+[package]
+name = "pocket-apple"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/pocket-stack/pocketjs"
+description = "The PocketJS `ui` surface for Apple platforms: pocket-mod guest, pak feeding, software raster DrawList behind a C ABI"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+pocket-mod = { path = "../crates/pocket-mod" }
+pocket-ui-surface = { path = "../crates/pocket-ui-surface" }
+pocketjs-core = { path = "../core", features = ["std"] }
+log = "0.4"
+
+# rquickjs ships pre-generated FFI bindings for common targets but NOT the
+# aarch64-apple-ios family, so generate them at build time (bindgen; requires
+# libclang) for iOS builds only. Desktop builds — including the examples and
+# `cargo test --workspace` in CI — keep the pre-generated bindings, so cargo's
+# feature unification never drags libclang into the other workspace members.
+[target.'cfg(target_os = "ios")'.dependencies]
+rquickjs = { version = "0.12", features = ["bindgen"] }

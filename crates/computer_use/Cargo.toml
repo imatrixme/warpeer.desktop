@@ -1,0 +1,113 @@
+[package]
+name = "computer_use"
+edition = "2024"
+authors.workspace = true
+default-run = "use_computer"
+publish.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "use_computer"
+path = "src/bin/use_computer.rs"
+required-features = ["runtime"]
+
+[features]
+default = ["runtime"]
+runtime = [
+    "dep:ashpd",
+    "dep:command",
+    "dep:clap",
+    "dep:dispatch2",
+    "dep:futures",
+    "dep:image",
+    "dep:libc",
+    "dep:nix",
+    "dep:objc2",
+    "dep:objc2-app-kit",
+    "dep:objc2-core-foundation",
+    "dep:objc2-core-graphics",
+    "dep:tempfile",
+    "dep:tokio",
+    "dep:url",
+    "dep:uuid",
+    "dep:warpui_core",
+    "dep:windows",
+    "dep:x11rb",
+    "dep:zbus",
+    "tokio/io-util",
+    "tokio/process",
+    "tokio/time",
+]
+test-util = []
+
+[dependencies]
+anyhow.workspace = true
+warp_errors.workspace = true
+async-trait.workspace = true
+cfg-if.workspace = true
+clap = { workspace = true, optional = true }
+instant.workspace = true
+log.workspace = true
+pathfinder_geometry.workspace = true
+serde.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, optional = true, features = ["rt", "macros"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+command = { workspace = true, optional = true }
+dispatch2 = { workspace = true, optional = true }
+image = { workspace = true, optional = true }
+# `instant` is already provided by the common [dependencies] table above.
+libc = { workspace = true, optional = true }
+objc2 = { workspace = true, optional = true }
+# `NSEvent`/`NSGraphicsContext`/`objc2-core-graphics` are needed to build window-targeted mouse
+# events via `NSEvent::mouseEventWithType_...` and bridge to `CGEvent` for PID-targeted posting.
+objc2-app-kit = { workspace = true, optional = true, features = [
+    "NSEvent",
+    "NSGraphicsContext",
+    "objc2-core-graphics",
+] }
+objc2-core-foundation = { workspace = true, optional = true }
+# The `libc` feature is required for `CGEvent::post_to_pid`, which delivers events to a
+# specific process without moving the global cursor.
+objc2-core-graphics = { workspace = true, optional = true, features = ["libc"] }
+tempfile = { workspace = true, optional = true }
+warpui_core = { workspace = true, optional = true }
+# The avfoundation video recorder (`mac/recording.rs`) shells out to a supervised
+# ffmpeg subprocess, mirroring `linux/recording.rs`: tokio `process`/`time` drive
+# the spawn + finalize timeouts, `nix` sends SIGINT to finalize the container,
+# and `uuid` names the ephemeral recording file.
+nix = { workspace = true, optional = true, features = ["signal"] }
+uuid = { workspace = true, optional = true }
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+ashpd = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+image = { workspace = true, optional = true }
+nix = { workspace = true, optional = true, features = ["signal"] }
+url = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+warpui_core = { workspace = true, optional = true }
+# `xinput` provides the XI2 (MPX) device hierarchy used for background per-window control,
+# `composite` provides off-screen window capture for background window screenshots.
+x11rb = { workspace = true, optional = true, features = ["composite", "xinput", "xtest"] }
+zbus = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+image = { workspace = true, optional = true }
+warpui_core = { workspace = true, optional = true }
+windows = { workspace = true, optional = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_StationsAndDesktops",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[dev-dependencies]
+computer_use = { path = ".", default-features = false, features = ["test-util"] }
+
+[build-dependencies]
+cfg_aliases = "0.2.1"

@@ -1,0 +1,438 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+fail() {
+  echo "Warpeer product contract failed: $*" >&2
+  exit 1
+}
+
+require_match() {
+  local pattern="$1"
+  local path="$2"
+  rg --quiet --fixed-strings -- "$pattern" "$path" || fail "missing '$pattern' in $path"
+}
+
+require_regex() {
+  local pattern="$1"
+  local path="$2"
+  rg --quiet --multiline -- "$pattern" "$path" || fail "missing regex '$pattern' in $path"
+}
+
+reject_match() {
+  local pattern="$1"
+  local path="$2"
+  if rg --quiet --fixed-strings -- "$pattern" "$path"; then
+    fail "unexpected '$pattern' in $path"
+  fi
+}
+
+require_max_lines() {
+  local maximum="$1"
+  local path="$2"
+  local lines
+  lines="$(wc -l < "$path")"
+  if (( lines > maximum )); then
+    fail "$path has $lines lines; maximum is $maximum"
+  fi
+}
+
+require_match 'warp::run_terminal_only()' app/src/bin/warpeer.rs
+require_match 'AppId::new("com", "matrixme", "warpeer")' app/src/bin/warpeer.rs
+require_match '<string>com.matrixme.warpeer</string>' app/src/bin/warpeer.rs
+require_match 'home_config_dir_name: Some(".warpeer".into())' app/src/bin/warpeer.rs
+require_match 'use_system_cache_dir: true' app/src/bin/warpeer.rs
+require_match 'WarpServerConfig::disabled()' app/src/bin/warpeer.rs
+require_match 'OzConfig::disabled()' app/src/bin/warpeer.rs
+require_match 'telemetry_config: None' app/src/bin/warpeer.rs
+require_match 'crash_reporting_config: None' app/src/bin/warpeer.rs
+require_match 'autoupdate_config: None' app/src/bin/warpeer.rs
+require_match '#[path = "autoupdate_disabled.rs"]' app/src/lib.rs
+require_match '#[path = "agent_sdk_disabled.rs"]' app/src/ai/mod.rs
+require_match '#[path = "remote_agent_context_disabled.rs"]' app/src/ai/mod.rs
+require_match '#[path = "warp_agent_page_disabled.rs"]' app/src/settings_view/mod.rs
+require_match '#[path = "agent_profiles_page_disabled.rs"]' app/src/settings_view/mod.rs
+require_match '#[path = "code_indexing_page_disabled.rs"]' app/src/settings_view/mod.rs
+require_match '#[path = "cli_agents_page_disabled.rs"]' app/src/settings_view/mod.rs
+require_match '#[path = "knowledge_page_disabled.rs"]' app/src/settings_view/mod.rs
+require_match '#[path = "listener_disabled.rs"]' app/src/server/cloud_objects/mod.rs
+require_match '#[path = "server_api/harness_support_disabled.rs"]' app/src/server/server_api.rs
+require_match '#[path = "server_api/presigned_upload_disabled.rs"]' app/src/server/server_api.rs
+require_match 'hosted_product = [' app/Cargo.toml
+require_match 'hosted_agent_sdk = ["hosted_mcp", "hosted_uploads"]' app/Cargo.toml
+require_match 'hosted_agent_events = [' app/Cargo.toml
+require_match 'hosted_ai_client = ["dep:warp_multi_agent_client", "hosted_uploads"]' app/Cargo.toml
+require_match 'hosted_auth = ["warp_server_client/auth_runtime"]' app/Cargo.toml
+require_match 'hosted_autoupdate = []' app/Cargo.toml
+require_match 'hosted_cloud_sync = ["hosted_graphql_subscriptions"]' app/Cargo.toml
+require_match 'hosted_graphql_subscriptions = ["warp_graphql/subscription_runtime"]' app/Cargo.toml
+require_match 'hosted_managed_secrets = ["warp_managed_secrets/runtime"]' app/Cargo.toml
+require_match 'hosted_mcp = ["dep:mcp", "dep:rmcp"]' app/Cargo.toml
+require_match 'hosted_observability = [' app/Cargo.toml
+require_match 'hosted_aws = [' app/Cargo.toml
+require_match 'hosted_onboarding = ["dep:onboarding"]' app/Cargo.toml
+require_match 'full_text_search_backend = ["warp_search_core/full_text"]' app/Cargo.toml
+require_match 'computer_use = { path = "crates/computer_use", default-features = false }' Cargo.toml
+require_match 'http_client = { path = "crates/http_client", default-features = false }' Cargo.toml
+require_match 'warp_graphql = { path = "crates/graphql", default-features = false }' Cargo.toml
+require_match 'warp_isolation_platform = { path = "crates/isolation_platform", default-features = false }' Cargo.toml
+require_match 'warp_managed_secrets = { path = "crates/managed_secrets", default-features = false }' Cargo.toml
+require_match 'warp_search_core = { path = "crates/warp_search_core", default-features = false }' Cargo.toml
+require_match 'warp_server_client = { path = "crates/warp_server_client", default-features = false }' Cargo.toml
+require_match 'websocket = { path = "crates/websocket", default-features = false }' Cargo.toml
+require_match 'warp_core::telemetry::disable_telemetry();' app/src/lib.rs
+require_match 'AuthState::initialize_logged_out()' app/src/lib.rs
+require_regex '#\[cfg\(feature = "warpeer"\)\]\nmod worktree_agents;' app/src/lib.rs
+require_regex '#\[cfg\(feature = "warpeer"\)\]\n    worktree_agents::init\(ctx\);' app/src/lib.rs
+require_regex '#\[cfg\(feature = "warpeer"\)\]\n    OpenWarpeerTerminal' app/src/workspace/action.rs
+require_regex '#\[cfg\(feature = "warpeer"\)\]\n            OpenWarpeerTerminal' app/src/workspace/view.rs
+require_regex '#\[cfg\(feature = "warpeer"\)\]\n        crate::worktree_agents::prepend_prompt_chip' app/src/context_chips/prompt.rs
+require_match '!crate::product_profile::allows_hosted_services()' app/src/auth/auth_manager.rs
+require_match '!crate::product_profile::allows_language_server_downloads()' app/src/terminal/view/init_project/model.rs
+require_match 'for forbidden_resource in skills mcp_skills' script/warpeer/build-dmg
+require_match 'tracked_signing_material=' script/warpeer/build-dmg
+require_match 'bundled_signing_material=' script/warpeer/build-dmg
+require_match 'Release-Entitlements.plist' script/warpeer/build-dmg
+require_match 'asc notarization submit' script/warpeer/build-dmg
+require_match 'context:primary-signature' script/warpeer/build-dmg
+require_match 'export GIT_RELEASE_TAG="$version"' script/warpeer/build-dmg
+require_match 'bundled/png/warpeer.png' app/src/settings_view/about_page.rs
+require_match 'set background color to {61952, 62976, 63744}' \
+  script/warpeer/layout-dmg.applescript
+reject_match '.background' script/warpeer/build-dmg
+reject_match '.VolumeIcon.icns' script/warpeer/build-dmg
+reject_match 'background picture' script/warpeer/layout-dmg.applescript
+reject_match 'set-file-icon' script/warpeer/build-dmg
+require_match 'profile="release-warpeer"' script/warpeer/build-dmg
+require_match '--no-default-features' script/warpeer/build-dmg
+require_match '--features warpeer' script/warpeer/build-dmg
+require_match '--no-default-features' script/run-warpeer
+require_match '--features warpeer' script/run-warpeer
+require_match 'TerminalVisualSettings::register(ctx);' app/src/settings/init.rs
+require_match 'strip -S -x "$binary_path"' script/warpeer/build-dmg
+require_match 'WARPEER_MAX_DMG_BYTES:-52428800' script/warpeer/build-dmg
+require_match '-format ULMO' script/warpeer/build-dmg
+require_match 'lto = "thin"' Cargo.toml
+require_match 'codegen-units = 4' Cargo.toml
+require_match '--clean' script/warpeer/build-dmg
+require_match 'target/warpeer-package' script/warpeer/build-dmg
+require_match 'warpeer-core = [' crates/languages/Cargo.toml
+require_match 'full = [' crates/languages/Cargo.toml
+require_match 'languages/warpeer-core' app/Cargo.toml
+require_match 'warpeer-extended-syntax = ["warpeer", "languages/full"]' app/Cargo.toml
+require_match '#[path = "mermaid_diagram_disabled.rs"]' crates/editor/src/content/mod.rs
+require_match 'markdown_mermaid = ["mermaid_rendering"]' app/Cargo.toml
+require_match 'mermaid_rendering = ["dep:mermaid_to_svg", "warp_editor/mermaid"]' app/Cargo.toml
+require_match 'embedded_command_signatures = ["warp_completer/embedded-signatures"]' app/Cargo.toml
+require_match 'embedded-signatures = ["warp-command-signatures/embed-signatures"]' \
+  crates/warp_completer/Cargo.toml
+require_match '#[cfg_attr(feature = "warpeer", exclude = "async/**")]' \
+  crates/warp_assets/src/lib.rs
+require_match 'ghostty-themes.json' app/src/themes/ghostty_themes.rs
+require_match 'sync-ghostty-themes" --check' script/warpeer/build-dmg
+require_match 'sync-pocketjs" --check' script/warpeer/build-dmg
+require_match 'warpeer_plugins = [' app/Cargo.toml
+require_match 'warpui/external_surfaces' app/Cargo.toml
+require_match '#[cfg(feature = "warpeer_plugins")]' app/src/settings_view/mod.rs
+require_match 'mod container_host;' app/src/warpeer_plugin/mod.rs
+require_match 'mod container_transition_visual;' app/src/warpeer_plugin/mod.rs
+require_match 'mod legacy_container_adapter;' app/src/warpeer_plugin/mod.rs
+require_match 'export class ContainerController' plugins/sdk/container.ts
+require_match 'container.open(' plugins/image-preview/src/app.tsx
+
+for bounded_container_source in \
+  app/src/ai/agent_events_disabled.rs \
+  app/src/ai/agent_sdk_disabled.rs \
+  app/src/ai/remote_agent_context_disabled.rs \
+  app/src/ai/skills/resolve_skill_spec_disabled.rs \
+  app/src/autoupdate_disabled.rs \
+  app/src/integration_testing/worktree_agents.rs \
+  app/src/onboarding_disabled.rs \
+  app/src/server/cloud_objects/listener_disabled.rs \
+  app/src/server/server_api/factory_disabled.rs \
+  app/src/server/server_api/harness_support_disabled.rs \
+  app/src/server/server_api/integrations_disabled.rs \
+  app/src/server/server_api/managed_mcp_disabled.rs \
+  app/src/server/server_api/presigned_upload_disabled.rs \
+  app/src/settings_view/agent_profiles_page_disabled.rs \
+  app/src/settings_view/cli_agents_page_disabled.rs \
+  app/src/settings_view/code_indexing_page_disabled.rs \
+  app/src/settings_view/knowledge_page_disabled.rs \
+  app/src/settings_view/mcp_servers_page_disabled.rs \
+  app/src/settings_view/warp_agent_page_disabled.rs \
+  app/src/terminal/view/plugin_hover.rs \
+  app/src/terminal/view/plugin_container_menu.rs \
+  app/src/terminal/view/plugin_container_presentation.rs \
+  app/src/context_chips/display_chip/worktree.rs \
+  app/src/context_chips/git_worktree_porcelain.rs \
+  app/src/warpeer_plugin/container_host.rs \
+  app/src/warpeer_plugin/container_transition_visual.rs \
+  app/src/warpeer_plugin/legacy_container_adapter.rs \
+  app/src/warpeer_plugin/surface_element_host.rs \
+  app/src/worktree_agents/catalog.rs \
+  app/src/worktree_agents/catalog_dirty.rs \
+  app/src/worktree_agents/coordinator.rs \
+  app/src/worktree_agents/coordinator/activation.rs \
+  app/src/worktree_agents/coordinator/catalog.rs \
+  app/src/worktree_agents/coordinator/herdr.rs \
+  app/src/worktree_agents/coordinator/host.rs \
+  app/src/worktree_agents/coordinator/host/health.rs \
+  app/src/worktree_agents/coordinator/pane_sessions.rs \
+  app/src/worktree_agents/identity.rs \
+  app/src/worktree_agents/launch.rs \
+  app/src/worktree_agents/navigation.rs \
+  app/src/worktree_agents/observation.rs \
+  app/src/worktree_agents/pane_index.rs \
+  app/src/worktree_agents/projections.rs \
+  app/src/worktree_agents/prompt_catalog.rs \
+  app/src/worktree_agents/providers.rs \
+  app/src/worktree_agents/providers/claude.rs \
+  app/src/worktree_agents/providers/codex.rs \
+  app/src/worktree_agents/providers/herdr.rs \
+  app/src/worktree_agents/providers/tmux.rs \
+  app/src/worktree_agents/routing.rs \
+  app/src/worktree_agents/runtimes.rs \
+  app/src/worktree_agents/sources.rs \
+  app/src/worktree_agents/ui.rs \
+  app/src/worktree_agents/ui/activation.rs \
+  app/src/worktree_agents/ui/animation.rs \
+  app/src/worktree_agents/ui/overview.rs \
+  app/src/worktree_agents/ui/status.rs \
+  crates/integration/src/test/worktree_agents.rs \
+  crates/editor/src/content/mermaid_diagram_disabled.rs \
+  crates/warpeer_plugin_protocol/src/container.rs \
+  crates/warpeer_plugin_runtime/src/container_budget.rs \
+  crates/warpeer_plugin_runtime/src/container_ledger.rs \
+  crates/warpeer_plugin_runtime/src/container_reducer.rs \
+  crates/warpeer_plugin_runtime/src/container_store.rs \
+  crates/warpeer_plugin_runtime/src/container_store_resources.rs \
+  crates/warpeer_plugin_runtime/src/extension_negotiation.rs \
+  plugins/sdk/container.ts \
+  plugins/image-preview/src/app.tsx \
+  plugins/image-preview/src/presentation.ts
+do
+  require_max_lines 500 "$bounded_container_source"
+done
+
+if rg --quiet 'open-agent-view' Cargo.toml app/Cargo.toml Cargo.lock; then
+  fail 'Warpeer worktree Agent control must not depend on Open Agent View'
+fi
+
+for worktree_agent_shared_hook in \
+  app/src/context_chips/current_prompt.rs \
+  app/src/context_chips/display_chip.rs \
+  app/src/context_chips/mod.rs \
+  app/src/context_chips/prompt.rs \
+  app/src/lib.rs \
+  app/src/product_profile.rs \
+  app/src/terminal/input.rs \
+  app/src/terminal/view.rs \
+  app/src/terminal/view/pane_impl.rs \
+  app/src/workspace/action.rs \
+  app/src/workspace/view.rs
+do
+  if rg --quiet 'query_(claude|codex|tmux|herdr)|ObservationStore|RouteRegistry|pane_for_process|infer_agents' \
+    "$worktree_agent_shared_hook"; then
+    fail "worktree Agent implementation escaped its adapter boundary: $worktree_agent_shared_hook"
+  fi
+done
+
+script/warpeer/sync-ghostty-themes --check
+script/warpeer/sync-pocketjs --check
+
+if rg --quiet 'WARPEER_NOTARY_PROFILE|notarytool store-credentials' \
+  script/warpeer; then
+  fail 'Warpeer distribution must use existing ASC authentication'
+fi
+
+for ignored_signing_material in \
+  '*.p8' \
+  '*.p12' \
+  '*.mobileprovision' \
+  '*.provisionprofile' \
+  '*.keychain-db'
+do
+  git check-ignore -q "$ignored_signing_material" || \
+    fail "signing material is not ignored: $ignored_signing_material"
+done
+
+if rg --quiet 'TillerWarp|tiller-warp|tiller_warp|dev\.tiller\.TillerWarp' \
+  app/src/bin/warpeer.rs app/Cargo.toml app/src/app_menus.rs script/warpeer script/run-warpeer; then
+  fail 'legacy TillerWarp branding remains in the Warpeer product surface'
+fi
+
+release_profile="$(awk '
+  /^\[profile\.release-warpeer\]$/ { capture = 1; next }
+  /^\[/ { capture = 0 }
+  capture
+' Cargo.toml)"
+if grep -Eq 'panic[[:space:]]*=[[:space:]]*"abort"|opt-level[[:space:]]*=[[:space:]]*"[sz]"' \
+  <<<"$release_profile"; then
+  fail 'release-warpeer must preserve unwind semantics and release optimization'
+fi
+
+dependency_tree="$(mktemp)"
+full_dependency_tree="$(mktemp)"
+warpeer_feature_tree="$(mktemp)"
+full_feature_tree="$(mktemp)"
+trap 'rm -f -- "$dependency_tree" "$full_dependency_tree" "$warpeer_feature_tree" \
+  "$full_feature_tree"' EXIT
+cargo tree -p warp --no-default-features --features warpeer -e normal --prefix none \
+  > "$dependency_tree"
+for required_dependency in \
+  pocketjs_adapter \
+  warpeer_plugin_protocol \
+  warpeer_plugin_runtime \
+  warpeer_plugin_surface_transport \
+  warpeer_plugin_worker
+do
+  if ! grep -Eq "^${required_dependency}( |$)" "$dependency_tree"; then
+    fail "required plugin dependency is missing from the Warpeer closure: $required_dependency"
+  fi
+done
+for forbidden_dependency in \
+  app-installation-detection \
+  aws-config \
+  aws-credential-types \
+  aws-sdk-signin \
+  aws-sdk-sso \
+  aws-sdk-ssooidc \
+  aws-sdk-sts \
+  aws-types \
+  axum \
+  firebase \
+  graphql-ws-client \
+  hpke \
+  http_server \
+  local_control \
+  mcp \
+  onboarding \
+  open-agent-view \
+  open_agent_view \
+  opentelemetry \
+  opentelemetry-http \
+  opentelemetry-otlp \
+  opentelemetry_sdk \
+  priority-queue \
+  ratatui \
+  reqwest-eventsource \
+  rmcp \
+  tantivy \
+  tink-aead \
+  tink-core \
+  tink-daead \
+  tink-hybrid \
+  tink-mac \
+  tink-prf \
+  tink-proto \
+  tracing-opentelemetry \
+  tracing-subscriber \
+  warp_multi_agent_client \
+  warp_tui \
+  voice_input \
+  sentry \
+  sentry-log \
+  minidumper \
+  mermaid_to_svg \
+  dagre_rust \
+  arborium-java \
+  arborium-cpp \
+  arborium-go \
+  arborium-ruby \
+  arborium-php \
+  arborium-kotlin \
+  arborium-scala \
+  arborium-powershell \
+  arborium-elixir \
+  arborium-sql \
+  arborium-hcl \
+  arborium-lua \
+  arborium-nix \
+  arborium-objc \
+  arborium-xml \
+  arborium-vue \
+  arborium-dockerfile \
+  arborium-jq
+do
+  if grep -Eq "^${forbidden_dependency}( |$)" "$dependency_tree"; then
+    fail "forbidden dependency is present in the Warpeer closure: $forbidden_dependency"
+  fi
+done
+
+cargo tree -p warp --features gui -e normal --prefix none > "$full_dependency_tree"
+for required_full_dependency in \
+  mermaid_to_svg \
+  dagre_rust
+do
+  if ! grep -Eq "^${required_full_dependency}( |$)" "$full_dependency_tree"; then
+    fail "full Warp dependency is missing: $required_full_dependency"
+  fi
+done
+for warpeer_only_dependency in \
+  pocketjs_adapter \
+  warpeer_plugin_protocol \
+  warpeer_plugin_runtime \
+  warpeer_plugin_surface_transport \
+  warpeer_plugin_worker
+do
+  if grep -Eq "^${warpeer_only_dependency}( |$)" "$full_dependency_tree"; then
+    fail "Warpeer-only plugin dependency leaked into full Warp: $warpeer_only_dependency"
+  fi
+done
+
+cargo tree -p warp --no-default-features --features warpeer -e features \
+  -i warp-command-signatures --prefix none > "$warpeer_feature_tree"
+cargo tree -p warp --features gui -e features -i warp-command-signatures --prefix none \
+  > "$full_feature_tree"
+if grep -Fq 'warp-command-signatures feature "embed-signatures"' "$warpeer_feature_tree"; then
+  fail 'embedded cross-platform command signatures leaked into Warpeer'
+fi
+if ! grep -Fq 'warp-command-signatures feature "embed-signatures"' "$full_feature_tree"; then
+  fail 'full Warp lost embedded command signatures'
+fi
+
+if awk '
+  /fn is_available\(self\)/ { capture = 1 }
+  /Stable identifier for this section/ { capture = 0 }
+  capture
+' app/src/settings_view/mod.rs | rg --quiet --fixed-strings 'Self::Privacy'; then
+  fail 'Privacy is available in the terminal-only settings allowlist'
+fi
+
+for guarded_share_path in \
+  app/src/pane_group/mod.rs \
+  app/src/pane_group/pane/view/header/sharing.rs \
+  app/src/pane_group/pane/view/mod.rs \
+  app/src/terminal/view.rs \
+  app/src/terminal/view/init.rs \
+  app/src/terminal/view/shared_session/view_impl.rs
+do
+  require_match 'is_full_warp' "$guarded_share_path"
+done
+
+./script/format --check
+cargo check -p warp --bin warpeer --no-default-features --features warpeer
+cargo check -p warp --bin warp --features gui
+cargo check -p warp_completer --no-default-features
+cargo check -p warp_completer --features embedded-signatures
+cargo test -p warp_editor --no-default-features \
+  test_mermaid_code_block_type_respects_feature_flag
+cargo test -p warp_editor test_mermaid_code_block_type_respects_feature_flag
+cargo test -p warpeer_plugin_protocol
+cargo test -p warpeer_plugin_runtime
+cargo test -p warpeer_plugin_surface_transport
+cargo test -p pocketjs_adapter
+cargo test -p warpeer_plugin_worker
+cargo test -p warp --lib --no-default-features --features warpeer warpeer_plugin::
+cargo test -p warp --lib --no-default-features --features warpeer \
+  terminal::view::plugin_hover::tests::terminal_snapshot_lock_is_released_before_dispatch_scope
+cargo test -p warp plugin_settings_availability --lib --no-default-features --features warpeer
+cargo test -p warp plugin_settings_availability --lib --features gui
+cargo test -p warp product_profile --lib --features gui
+cargo test -p warp ghostty_theme --lib --features gui,warpeer_assets
+cargo test -p warp_assets --features warpeer
+cargo test -p languages --no-default-features --features warpeer-core
+cargo test -p languages

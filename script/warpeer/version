@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+mode="${1:-next}"
+
+case "$mode" in
+  next|current) ;;
+  -h|--help)
+    echo "usage: $0 [next|current]"
+    exit 0
+    ;;
+  *)
+    echo "error: unknown mode: $mode" >&2
+    exit 2
+    ;;
+esac
+
+git_state_path="$(git -C "$repo_root" rev-parse --git-path warpeer-build-number)"
+case "$git_state_path" in
+  /*) default_state_path="$git_state_path" ;;
+  *) default_state_path="$repo_root/$git_state_path" ;;
+esac
+state_path="${WARPEER_BUILD_NUMBER_FILE:-$default_state_path}"
+lock_path="$state_path.lock"
+minimum_build_number=1000
+
+read_build_number() {
+  if [[ -f "$state_path" ]]; then
+    local stored_build_number
+    IFS= read -r stored_build_number < "$state_path"
+    [[ "$stored_build_number" =~ ^[0-9]+$ ]] || {
+      echo "error: invalid Warpeer build number in $state_path" >&2
+      exit 1
+    }
+    ((stored_build_number >= minimum_build_number)) || {
+      echo "error: Warpeer build number must be at least $minimum_build_number" >&2
+      exit 1
+    }
+    printf '%s\n' "$stored_build_number"
+    return
+  fi
+
+  local commit_count
+  commit_count="$(git -C "$repo_root" rev-list --count HEAD)"
+  if ((commit_count < minimum_build_number)); then
+    commit_count=$minimum_build_number
+  fi
+  printf '%s\n' "$commit_count"
+}
+
+build_number="$(read_build_number)"
+if [[ "$mode" == "next" ]]; then
+  mkdir -p "$(dirname "$state_path")"
+  mkdir "$lock_path" 2>/dev/null || {
+    echo "error: another Warpeer build is reserving a version" >&2
+    exit 1
+  }
+  cleanup_lock() {
+    rmdir "$lock_path" 2>/dev/null || true
+  }
+  trap cleanup_lock EXIT INT TERM HUP
+
+  build_number="$(read_build_number)"
+  build_number=$((build_number + 1))
+  temporary_state_path="$state_path.tmp.$$"
+  printf '%s\n' "$build_number" > "$temporary_state_path"
+  mv "$temporary_state_path" "$state_path"
+
+  cleanup_lock
+  trap - EXIT INT TERM HUP
+fi
+
+printf '%s\t%s\n' "${WARPEER_VERSION:-0.1.$build_number}" "$build_number"

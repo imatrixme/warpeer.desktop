@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+icon_dir="$repo_root/app/channels/warpeer/icon/no-padding"
+source_png="$icon_dir/source.png"
+processed_png="$icon_dir/1024x1024.png"
+bundled_png="$repo_root/app/assets/bundled/png/warpeer.png"
+workspace_dir="$(mktemp -d "${TMPDIR:-/tmp}/warpeer-icon.XXXXXX")"
+iconset_dir="$workspace_dir/Warpeer.iconset"
+compressed_master="$workspace_dir/compressed-master.png"
+
+cleanup() {
+  rm -rf -- "$workspace_dir"
+}
+trap cleanup EXIT
+
+for command in iconutil sips; do
+  command -v "$command" >/dev/null 2>&1 || {
+    echo "error: required command not found: $command" >&2
+    exit 1
+  }
+done
+
+[[ -f "$source_png" ]] || {
+  echo "error: generated source icon not found: $source_png" >&2
+  exit 1
+}
+
+sips -z 1024 1024 "$source_png" --out "$processed_png" >/dev/null
+# Downsample once so the generated ICNS stays below the 500 KB product cap.
+sips -z 384 384 "$processed_png" --out "$compressed_master" >/dev/null
+
+mkdir -p "$iconset_dir"
+representations=(
+  "16:icon_16x16.png"
+  "32:icon_16x16@2x.png"
+  "128:icon_128x128.png"
+  "256:icon_128x128@2x.png"
+  "512:icon_256x256@2x.png"
+)
+for representation in "${representations[@]}"; do
+  size="${representation%%:*}"
+  filename="${representation#*:}"
+  sips -z "$size" "$size" "$compressed_master" \
+    --out "$iconset_dir/$filename" >/dev/null
+done
+
+cp "$iconset_dir/icon_256x256@2x.png" "$bundled_png"
+iconutil -c icns "$iconset_dir" -o "$icon_dir/icon.icns"
+echo "Prepared $icon_dir/icon.icns and $bundled_png"

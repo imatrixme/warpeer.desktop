@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+
+import argparse
+import hashlib
+import io
+import json
+import re
+import sys
+import tarfile
+import tempfile
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+DEFAULT_GHOSTTY_REF = "42a161aadad94d593b87db12d59c93f8915d3921"
+GHOSTTY_REPOSITORY = "https://github.com/ghostty-org/ghostty"
+ITERM_LICENSE_URL = (
+    "https://raw.githubusercontent.com/mbadolato/iTerm2-Color-Schemes/master/LICENSE"
+)
+COLOR_KEYS = {
+    "background",
+    "cursor-color",
+    "cursor-text",
+    "foreground",
+    "palette",
+    "selection-background",
+    "selection-foreground",
+}
+HEX_COLOR = re.compile(r"#?([0-9a-fA-F]{6})$")
+
+
+def fetch(url: str) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": "Warpeer theme sync"})
+    with urllib.request.urlopen(request) as response:
+        return response.read()
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def normalize_text_file(data: bytes) -> bytes:
+    lines = data.decode("utf-8").splitlines()
+    return ("\n".join(line.rstrip() for line in lines) + "\n").encode()
+
+
+def atomic_write(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as temporary:
+        temporary.write(data)
+        temporary_path = Path(temporary.name)
+    temporary_path.replace(path)
+
+
+def parse_color(value: str, source: str, key: str) -> int:
+    match = HEX_COLOR.fullmatch(value.strip())
+    if not match:
+        raise ValueError(f"{source}: invalid {key} color {value!r}")
+    return int(match.group(1), 16)
+
+
+def parse_theme(name: str, contents: str) -> dict:
+    palette = {}
+    values = {}
+
+    for line_number, raw_line in enumerate(contents.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError(f"{name}:{line_number}: expected key = value")
+
+        key, value = (part.strip() for part in line.split("=", 1))
+        if key not in COLOR_KEYS:
+            raise ValueError(f"{name}:{line_number}: unsupported theme option {key!r}")
+
+        if key == "palette":
+            if "=" not in value:
+                raise ValueError(f"{name}:{line_number}: malformed palette entry")
+            index_raw, color_raw = (part.strip() for part in value.split("=", 1))
+            try:
+                index = int(index_raw)
+            except ValueError as error:
+                raise ValueError(
+                    f"{name}:{line_number}: invalid palette index {index_raw!r}"
+                ) from error
+            if index not in range(16) or index in palette:
+                raise ValueError(f"{name}:{line_number}: invalid palette index {index}")
+            palette[index] = parse_color(color_raw, name, f"palette {index}")
+        else:
+            if key in values:
+                raise ValueError(f"{name}:{line_number}: duplicate option {key!r}")
+            values[key] = parse_color(value, name, key)
+
+    missing_palette = sorted(set(range(16)) - palette.keys())
+    missing_values = sorted({"background", "foreground"} - values.keys())
+    if missing_palette or missing_values:
+        raise ValueError(
+            f"{name}: incomplete theme; missing palette={missing_palette}, options={missing_values}"
+        )
+
+    foreground = values["foreground"]
+    background = values["background"]
+    return {
+        "id": name,
+        "name": name,
+        "background": background,
+        "foreground": foreground,
+        "cursor": values.get("cursor-color", foreground),
+        "cursor_text": values.get("cursor-text", background),
+        "selection_background": values.get("selection-background", palette[8]),
+        "selection_foreground": values.get("selection-foreground", foreground),
+        "palette": [palette[index] for index in range(16)],
+    }
+
+
+def theme_files(archive: bytes) -> list[tuple[str, str]]:
+    themes = []
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as package:
+        for member in package.getmembers():
+            if not member.isfile():
+                continue
+            name = Path(member.name).name
+            if name.startswith(".") or name.lower() in {"license", "readme", "readme.md"}:
+                continue
+            file = package.extractfile(member)
+            if file is None:
+                continue
+            try:
+                contents = file.read().decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise ValueError(f"{member.name}: theme is not UTF-8") from error
+            themes.append((name, contents))
+    return themes
+
+
+def ghostty_theme_dependency(build_zig_zon: str) -> tuple[str, str]:
+    match = re.search(
+        r"\.iterm2_themes\s*=\s*\.\{(?P<body>.*?)\n\s*\},",
+        build_zig_zon,
+        flags=re.DOTALL,
+    )
+    if not match:
+        raise ValueError("Ghostty build.zig.zon does not declare iterm2_themes")
+    body = match.group("body")
+    url_match = re.search(r'\.url\s*=\s*"([^"]+)"', body)
+    hash_match = re.search(r'\.hash\s*=\s*"([^"]+)"', body)
+    if not url_match or not hash_match:
+        raise ValueError("Ghostty iterm2_themes dependency is incomplete")
+    return url_match.group(1), hash_match.group(1)
+
+
+def catalog_bytes(ghostty_ref: str, source_url: str, source_sha256: str, themes: list) -> bytes:
+    catalog = {
+        "schema_version": 1,
+        "source": {
+            "ghostty_repository": GHOSTTY_REPOSITORY,
+            "ghostty_ref": ghostty_ref,
+            "theme_archive_url": source_url,
+            "theme_archive_sha256": source_sha256,
+        },
+        "themes": themes,
+    }
+    return (json.dumps(catalog, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+
+
+def manifest_bytes(
+    ghostty_ref: str,
+    source_url: str,
+    source_sha256: str,
+    source_zig_hash: str,
+    license_sha256: str,
+    catalog: bytes,
+    theme_count: int,
+) -> bytes:
+    manifest = {
+        "schema_version": 1,
+        "ghostty_repository": GHOSTTY_REPOSITORY,
+        "ghostty_ref": ghostty_ref,
+        "theme_archive_url": source_url,
+        "theme_archive_sha256": source_sha256,
+        "theme_archive_zig_hash": source_zig_hash,
+        "license_url": ITERM_LICENSE_URL,
+        "license_sha256": license_sha256,
+        "catalog_path": "app/assets/warpeer/ghostty-themes.json",
+        "catalog_sha256": sha256(catalog),
+        "theme_count": theme_count,
+    }
+    return (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
+
+
+def validate_local(repo_root: Path) -> None:
+    catalog_path = repo_root / "app/assets/warpeer/ghostty-themes.json"
+    manifest_path = repo_root / "third_party/ghostty-themes/manifest.json"
+    license_path = repo_root / "third_party/ghostty-themes/LICENSE"
+
+    manifest = json.loads(manifest_path.read_text())
+    catalog_bytes_local = catalog_path.read_bytes()
+    catalog = json.loads(catalog_bytes_local)
+    license_bytes = license_path.read_bytes()
+
+    if manifest["catalog_sha256"] != sha256(catalog_bytes_local):
+        raise ValueError("Ghostty theme catalog checksum does not match manifest")
+    if manifest["license_sha256"] != sha256(license_bytes):
+        raise ValueError("Ghostty theme license checksum does not match manifest")
+    if manifest["theme_count"] != len(catalog["themes"]):
+        raise ValueError("Ghostty theme count does not match manifest")
+    if catalog["source"]["ghostty_ref"] != manifest["ghostty_ref"]:
+        raise ValueError("Ghostty theme source reference does not match manifest")
+    if catalog["source"]["theme_archive_url"] != manifest["theme_archive_url"]:
+        raise ValueError("Ghostty theme source URL does not match manifest")
+    if catalog["source"]["theme_archive_sha256"] != manifest["theme_archive_sha256"]:
+        raise ValueError("Ghostty theme source checksum does not match manifest")
+
+    names = [theme["id"] for theme in catalog["themes"]]
+    if len(names) != len(set(names)):
+        raise ValueError("Ghostty theme catalog contains duplicate IDs")
+    for theme in catalog["themes"]:
+        if len(theme["palette"]) != 16:
+            raise ValueError(f"{theme['id']}: expected 16 palette colors")
+        colors = theme["palette"] + [
+            theme["background"],
+            theme["foreground"],
+            theme["cursor"],
+            theme["cursor_text"],
+            theme["selection_background"],
+            theme["selection_foreground"],
+        ]
+        if not all(isinstance(color, int) and 0 <= color <= 0xFFFFFF for color in colors):
+            raise ValueError(f"{theme['id']}: contains an invalid RGB color")
+
+    print(
+        f"Ghostty theme snapshot is valid: {manifest['theme_count']} themes, "
+        f"ref {manifest['ghostty_ref']}"
+    )
+
+
+def sync(repo_root: Path, ghostty_ref: str) -> None:
+    build_zig_zon_url = (
+        f"https://raw.githubusercontent.com/ghostty-org/ghostty/{ghostty_ref}/build.zig.zon"
+    )
+    build_zig_zon = fetch(build_zig_zon_url).decode("utf-8")
+    source_url, source_zig_hash = ghostty_theme_dependency(build_zig_zon)
+    archive = fetch(source_url)
+    license_bytes = normalize_text_file(fetch(ITERM_LICENSE_URL))
+
+    parsed_themes = []
+    seen_names = set()
+    for name, contents in theme_files(archive):
+        if name in seen_names:
+            raise ValueError(f"duplicate Ghostty theme name {name!r}")
+        seen_names.add(name)
+        parsed_themes.append(parse_theme(name, contents))
+    parsed_themes.sort(key=lambda theme: theme["name"].casefold())
+    if not parsed_themes:
+        raise ValueError("Ghostty theme archive did not contain any themes")
+
+    source_sha256 = sha256(archive)
+    catalog = catalog_bytes(ghostty_ref, source_url, source_sha256, parsed_themes)
+    manifest = manifest_bytes(
+        ghostty_ref,
+        source_url,
+        source_sha256,
+        source_zig_hash,
+        sha256(license_bytes),
+        catalog,
+        len(parsed_themes),
+    )
+
+    atomic_write(repo_root / "app/assets/warpeer/ghostty-themes.json", catalog)
+    atomic_write(repo_root / "third_party/ghostty-themes/manifest.json", manifest)
+    atomic_write(repo_root / "third_party/ghostty-themes/LICENSE", license_bytes)
+    validate_local(repo_root)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Manually update Warpeer's fixed Ghostty theme snapshot."
+    )
+    parser.add_argument("--check", action="store_true", help="validate the local snapshot offline")
+    parser.add_argument("--ghostty-ref", default=DEFAULT_GHOSTTY_REF)
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).resolve().parents[2]
+    try:
+        if args.check:
+            validate_local(repo_root)
+        else:
+            sync(repo_root, args.ghostty_ref)
+    except (OSError, ValueError, urllib.error.URLError, tarfile.TarError) as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

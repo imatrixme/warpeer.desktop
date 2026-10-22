@@ -1,0 +1,13 @@
+[package]
+name = "pocket-ui-surface"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/pocket-stack/pocketjs"
+description = "The backend-agnostic PocketJS `ui` surface: pak feeding + HostOps for the guest, independent of any renderer"
+
+[dependencies]
+pocket-mod = { path = "../pocket-mod" }
+pocketjs-core = { path = "../../core", features = ["std"] }
+anyhow = "1"
+log = "0.4"

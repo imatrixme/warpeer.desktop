@@ -1,0 +1,23 @@
+Warpeer
+Copyright (C) 2026 matrixme
+
+This program is a modified version of Warp (https://github.com/warpdotdev/warp),
+Copyright (C) 2020-2026 Denver Technologies, Inc.
+
+Warpeer is based on Warp upstream commit 17f4ec80ffa80749be035b2c2405e0f180a60e2e.
+The modifications turn Warp into a terminal-only product: account, cloud, hosted AI,
+telemetry, and auto-update features are removed or disabled, and Warpeer-specific
+terminal, pane, theme, privacy, and plugin features are added.
+
+Licensing:
+
+- crates/warpui_core and crates/warpui are licensed under the MIT license (LICENSE-MIT).
+- All other code is licensed under the GNU Affero General Public License, version 3
+  (LICENSE-AGPL).
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+Third-party components under third_party/ keep their own licenses as stated in their
+respective directories.

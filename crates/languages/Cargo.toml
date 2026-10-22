@@ -1,0 +1,68 @@
+[package]
+name = "languages"
+edition = "2024"
+authors = ["Warp Team <dev@warp.dev>"]
+publish.workspace = true
+license.workspace = true
+
+[features]
+default = ["full"]
+full = [
+    "arborium/lang-bash",
+    "arborium/lang-c",
+    "arborium/lang-c-sharp",
+    "arborium/lang-cpp",
+    "arborium/lang-css",
+    "arborium/lang-dockerfile",
+    "arborium/lang-elixir",
+    "arborium/lang-go",
+    "arborium/lang-hcl",
+    "arborium/lang-html",
+    "arborium/lang-java",
+    "arborium/lang-javascript",
+    "arborium/lang-jq",
+    "arborium/lang-json",
+    "arborium/lang-kotlin",
+    "arborium/lang-lua",
+    "arborium/lang-markdown",
+    "arborium/lang-nix",
+    "arborium/lang-objc",
+    "arborium/lang-php",
+    "arborium/lang-powershell",
+    "arborium/lang-python",
+    "arborium/lang-ruby",
+    "arborium/lang-rust",
+    "arborium/lang-scala",
+    "arborium/lang-sql",
+    "arborium/lang-starlark",
+    "arborium/lang-swift",
+    "arborium/lang-toml",
+    "arborium/lang-tsx",
+    "arborium/lang-typescript",
+    "arborium/lang-vue",
+    "arborium/lang-xml",
+    "arborium/lang-yaml",
+]
+warpeer-core = [
+    "arborium/lang-bash",
+    "arborium/lang-diff",
+    "arborium/lang-javascript",
+    "arborium/lang-json",
+    "arborium/lang-markdown",
+    "arborium/lang-python",
+    "arborium/lang-rust",
+    "arborium/lang-swift",
+    "arborium/lang-toml",
+    "arborium/lang-tsx",
+    "arborium/lang-typescript",
+    "arborium/lang-yaml",
+]
+
+[dependencies]
+serde.workspace = true
+serde_yaml.workspace = true
+rust-embed.workspace = true
+arborium.workspace = true
+lazy_static.workspace = true
+warp_editor = { path = "../editor", default-features = false }
+warp_util.workspace = true

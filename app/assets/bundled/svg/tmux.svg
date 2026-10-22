@@ -1,0 +1,9 @@
+<!-- Official tmux logomark, adapted to the app's monochrome icon pipeline.
+     Source: https://github.com/tmux/tmux/blob/master/logo/tmux-logomark.svg
+     License: ISC, see third_party/tmux-logo/LICENSE. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <g fill="white" fill-rule="evenodd" transform="scale(.15)">
+    <path d="M0 116h160v28.996C160 153.283 153.278 160 145.002 160H14.998C6.715 160 0 153.293 0 144.996V116z"/>
+    <path d="M83 70V0h-6v146h6V76h77v-6H83zM0 15.006C0 6.719 6.722 0 14.998 0h130.004C153.285 0 160 6.725 160 15.006V146H0V15.006z"/>
+  </g>
+</svg>
