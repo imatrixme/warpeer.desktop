@@ -87,9 +87,11 @@ require_match 'warp_core::telemetry::disable_telemetry();' app/src/lib.rs
 # Telemetry must be stopped at every layer: no event queued, no privacy opt-in honored, nothing
 # persisted for a later launch, and no request reaching RudderStack.
 require_match '"warpui/no_telemetry"' app/Cargo.toml
-# The ControlMaster SSH wrapper multiplexes background commands over the user's connection.
-require_regex 'let enable_ssh_wrapper = product_profile::allows_ssh_wrapper\(\)\n\s*&& ' \
-  app/src/terminal/local_tty/terminal_manager.rs
+# SSH Warpification must stay available, with background commands bounded per ControlMaster.
+require_match 'const MAX_CONCURRENT_COMMANDS_PER_CONTROL_MASTER: usize = 2;' \
+  app/src/terminal/model/session/command_executor/remote_command_executor.rs
+require_match 'let _permit = self.permits.acquire().await?;' \
+  app/src/terminal/model/session/command_executor/remote_command_executor.rs
 require_match 'const TELEMETRY_DISABLED: bool = cfg!(feature = "no_telemetry");' \
   crates/warpui_core/src/telemetry/mod.rs
 [[ "$(rg --count-matches --fixed-strings 'if TELEMETRY_DISABLED {' \

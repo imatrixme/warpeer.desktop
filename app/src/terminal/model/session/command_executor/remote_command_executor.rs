@@ -1,16 +1,38 @@
 use std::any::Any;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock};
 
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use command::r#async::Command;
 use itertools::Itertools as _;
+use parking_lot::Mutex;
+use tokio::sync::Semaphore;
 
 use super::shared::shell_escape_single_quotes;
 use super::{CommandExecutor, CommandOutput, ExecuteCommandOptions};
 use crate::env_vars::{EnvVarValue, serialize_variables_for_shell};
 use crate::terminal::shell::Shell;
+
+/// Maximum number of background commands multiplexed over one ControlMaster at a time. Each one
+/// opens a session channel, and sshd refuses channels beyond `MaxSessions` (10 by default, shared
+/// with the interactive session and any other `ssh` reusing the master), which prints
+/// `channel N: open failed` into the user's terminal.
+const MAX_CONCURRENT_COMMANDS_PER_CONTROL_MASTER: usize = 2;
+
+/// Keyed by ControlPath because every session reusing a master shares its `MaxSessions` budget, and
+/// `supports_parallel_command_execution` is only advisory to callers.
+static CONTROL_MASTER_PERMITS: LazyLock<Mutex<HashMap<PathBuf, Arc<Semaphore>>>> =
+    LazyLock::new(Default::default);
+
+fn control_master_permits(control_socket_path: &Path) -> Arc<Semaphore> {
+    CONTROL_MASTER_PERMITS
+        .lock()
+        .entry(control_socket_path.to_path_buf())
+        .or_insert_with(|| Arc::new(Semaphore::new(MAX_CONCURRENT_COMMANDS_PER_CONTROL_MASTER)))
+        .clone()
+}
 
 /// `CommandExecutor` implementation that executes the given `command` in a forked process
 /// that establishes a one-off SSH session with the same remote host as the active SSH session
@@ -20,11 +42,13 @@ use crate::terminal::shell::Shell;
 pub struct RemoteCommandExecutor {
     control_socket_path: PathBuf,
     wsl_distro: Option<String>,
+    permits: Arc<Semaphore>,
 }
 
 impl RemoteCommandExecutor {
     pub fn new(control_socket_path: PathBuf, wsl_distro: Option<String>) -> Self {
         Self {
+            permits: control_master_permits(&control_socket_path),
             control_socket_path,
             wsl_distro,
         }
@@ -98,6 +122,7 @@ impl CommandExecutor for RemoteCommandExecutor {
         };
 
         command.args(ssh_args);
+        let _permit = self.permits.acquire().await?;
         command
             .kill_on_drop(true)
             .output()
@@ -118,3 +143,7 @@ impl CommandExecutor for RemoteCommandExecutor {
         false
     }
 }
+
+#[cfg(test)]
+#[path = "remote_command_executor_tests.rs"]
+mod tests;

@@ -41,8 +41,6 @@ fn terminal_only_profile_rejects_service_features() {
     assert!(!profile.allows_language_server_downloads());
     assert!(!profile.allows_theme_background_images());
     assert!(!profile.allows_focus_panes_on_hover());
-    assert!(!profile.allows_ssh_wrapper());
-    assert!(ProductProfile::FullWarp.allows_ssh_wrapper());
     assert!(profile.allows_worktree_agent_control_center());
     assert!(ProductProfile::FullWarp.allows_theme_background_images());
     assert!(ProductProfile::FullWarp.allows_focus_panes_on_hover());
